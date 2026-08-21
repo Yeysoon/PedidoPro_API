@@ -4,18 +4,29 @@ let pool;
 
 if (process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL) {
     const connectionUrl = process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL;
-    pool = mysql.createPool(connectionUrl);
-    console.log('Conectando a MySQL mediante URL de Railway');
-} else {
     pool = mysql.createPool({
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'railway',
-        port: parseInt(process.env.DB_PORT) || 3306,
+        uri: connectionUrl,
         waitForConnections: true,
         connectionLimit: 10,
-        queueLimit: 0
+        queueLimit: 0,
+        ssl: {
+            rejectUnauthorized: false
+        }
+    });
+    console.log('Conectado a MySQL vía URL de Railway con SSL permisivo');
+} else {
+    pool = mysql.createPool({
+        host: process.env.DB_HOST || 'caboose.proxy.rlwy.net',
+        user: process.env.DB_USER || 'ybarillas',
+        password: process.env.DB_PASSWORD || 'Umg1234!',
+        database: process.env.DB_NAME || 'railway',
+        port: parseInt(process.env.DB_PORT) || 42857,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        ssl: {
+            rejectUnauthorized: false
+        }
     });
 }
 

@@ -42,11 +42,12 @@ const login = async (req, res) => {
 
     } catch (error) {
         console.error('Error en login:', error);
-        res.status(500).json({ message: 'Error del servidor' });
+        res.status(500).json({ message: 'Error del servidor: ' + error.message, error: error.stack });
     }
 };
 
 module.exports = {
     login
 };
+
 
