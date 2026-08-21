@@ -1,20 +1,20 @@
-const jwt = require('jsonwebtoken');
+﻿const jwt = require('jsonwebtoken');
 
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'No se proporcionó un token de acceso válido' });
+        return res.status(401).json({ message: 'No se proporcionÃ³ un token de acceso vÃ¡lido' });
     }
 
     const token = authHeader.split(' ')[1];
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, (process.env.JWT_SECRET || 'pedidopro_jwt_secret_key_2025_secure'));
         req.user = decoded; // { id, role }
         next();
     } catch (error) {
-        return res.status(401).json({ message: 'Token inválido o expirado' });
+        return res.status(401).json({ message: 'Token invÃ¡lido o expirado' });
     }
 };
 
@@ -31,3 +31,4 @@ module.exports = {
     verifyToken,
     checkRole
 };
+
