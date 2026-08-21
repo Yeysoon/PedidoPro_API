@@ -1,0 +1,130 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "PedidoPro API",
+    "version": "1.0.0",
+    "description": "API REST para el sistema de administración de restaurantes PedidoPro"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Servidor de Desarrollo Local"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "summary": "Iniciar sesión",
+        "tags": [
+          "Auth"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "admin@pedidopro.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "admin123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login exitoso, devuelve JWT token"
+          },
+          "401": {
+            "description": "Credenciales inválidas"
+          }
+        }
+      }
+    },
+    "/api/mesas": {
+      "get": {
+        "summary": "Listar todas las mesas",
+        "tags": [
+          "Mesas"
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de mesas"
+          }
+        }
+      }
+    },
+    "/api/pedidos": {
+      "post": {
+        "summary": "Crear un nuevo pedido",
+        "tags": [
+          "Pedidos"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id_mesa": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "notas_generales": {
+                    "type": "string",
+                    "example": "Sin sal en la mesa"
+                  },
+                  "detalles": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id_producto": {
+                          "type": "integer"
+                        },
+                        "cantidad": {
+                          "type": "integer"
+                        },
+                        "notas_especiales": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pedido creado exitosamente"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+const express = require('express');
+const cors = require('cors');
+const morgan = require('morgan');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('../swagger.json');
+
+const app = express();
+
+// Middlewares globales
+app.use(cors({
+    origin: process.env.FRONTEND_URL || '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json());
+app.use(morgan('dev')); // Logging HTTP en consola
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// Importar rutas
+const authRoutes = require('./routes/authRoutes');
+const mesasRoutes = require('./routes/mesasRoutes');
+const menuRoutes = require('./routes/menuRoutes');
+const pedidosRoutes = require('./routes/pedidosRoutes');
+const cocinaRoutes = require('./routes/cocinaRoutes');
+const cajaRoutes = require('./routes/cajaRoutes');
+const reportesRoutes = require('./routes/reportesRoutes');
+const usuarioRoutes = require('./routes/usuarioRoutes');
+const inventarioRoutes = require('./routes/inventarioRoutes');
+const clienteRoutes = require('./routes/clienteRoutes');
+const rolesRoutes = require('./routes/rolesRoutes');
+
+// Definir endpoints base
+app.use('/api/auth', authRoutes);
+app.use('/api/mesas', mesasRoutes);
+app.use('/api/menu', menuRoutes);
+app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/cocina', cocinaRoutes);
+app.use('/api/caja', cajaRoutes);
+app.use('/api/reportes', reportesRoutes);
+app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/inventario', inventarioRoutes);
+app.use('/api/clientes', clienteRoutes);
+app.use('/api/roles', rolesRoutes);
+
+app.get('/', (req, res) => {
+    res.send('API de PedidoPro funcionando correctamente.');
+});
+
+module.exports = app;
