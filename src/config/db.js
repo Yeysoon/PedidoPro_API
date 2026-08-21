@@ -2,19 +2,13 @@
 
 let pool;
 
-if (process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL) {
-    const connectionUrl = process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL;
-    pool = mysql.createPool({
-        uri: connectionUrl,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0,
-        ssl: {
-            rejectUnauthorized: false
-        }
-    });
-    console.log('Conectado a MySQL vía URL de Railway con SSL permisivo');
+const connectionString = process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL;
+
+if (connectionString) {
+    console.log('Inicializando pool MySQL con connection string de Railway');
+    pool = mysql.createPool(connectionString);
 } else {
+    console.log('Inicializando pool MySQL con variables individuales');
     pool = mysql.createPool({
         host: process.env.DB_HOST || 'caboose.proxy.rlwy.net',
         user: process.env.DB_USER || 'ybarillas',
@@ -23,10 +17,7 @@ if (process.env.MYSQL_URL || process.env.MYSQL_PUBLIC_URL) {
         port: parseInt(process.env.DB_PORT) || 42857,
         waitForConnections: true,
         connectionLimit: 10,
-        queueLimit: 0,
-        ssl: {
-            rejectUnauthorized: false
-        }
+        queueLimit: 0
     });
 }
 
