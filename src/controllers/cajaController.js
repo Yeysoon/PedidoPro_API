@@ -45,8 +45,40 @@ const anularFactura = async (req, res) => {
     }
 };
 
+
+const getFacturas = async (req, res) => {
+    try {
+        const { fechaInicio, fechaFin, page = 1, limit = 20 } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const result = await cajaModel.getFacturas(fechaInicio, fechaFin, pageNum, limitNum);
+        const total_paginas = Math.ceil(result.total_registros / limitNum);
+        res.json({
+            data: result.data,
+            meta: { total_registros: result.total_registros, total_paginas, pagina_actual: pageNum, limite_por_pagina: limitNum }
+        });
+    } catch (error) {
+        console.error('Error al obtener facturas:', error);
+        res.status(500).json({ message: 'Error al obtener facturas' });
+    }
+};
+
+const getFacturaById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const factura = await cajaModel.getFacturaById(id);
+        if (!factura) return res.status(404).json({ message: 'Factura no encontrada' });
+        res.json(factura);
+    } catch (error) {
+        console.error('Error al obtener factura:', error);
+        res.status(500).json({ message: 'Error al obtener factura' });
+    }
+};
 module.exports = {
     getPedidosListos,
     facturar,
-    anularFactura
+    anularFactura,
+    getFacturas,
+    getFacturaById
 };
+

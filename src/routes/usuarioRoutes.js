@@ -12,5 +12,7 @@ router.get('/:id', usuarioController.getUsuario);
 router.post('/', usuarioController.createUsuario);
 router.put('/:id', usuarioController.updateUsuario);
 router.patch('/:id/estado', usuarioController.toggleUser);
+router.patch('/:id/password', usuarioController.changePassword);
 
 module.exports = router;
+

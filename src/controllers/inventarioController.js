@@ -71,11 +71,23 @@ const saveReceta = async (req, res) => {
     }
 };
 
+
+const getAlertas = async (req, res) => {
+    try {
+        const alertas = await inventarioModel.getIngredientesStockBajo();
+        res.json({ total_alertas: alertas.length, alertas });
+    } catch (error) {
+        console.error('Error al obtener alertas de stock:', error);
+        res.status(500).json({ message: 'Error al obtener alertas de stock' });
+    }
+};
 module.exports = {
     getIngredientes,
     createIngrediente,
     updateIngrediente,
     deleteIngrediente,
     getReceta,
-    saveReceta
+    saveReceta,
+    getAlertas
 };
+

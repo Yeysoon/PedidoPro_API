@@ -43,7 +43,40 @@ const getProductosMasVendidos = async () => {
     return rows;
 };
 
+
+// Reporte de estado de inventario
+const getReporteInventario = async () => {
+    const query = `
+        SELECT 
+            i.id_ingrediente,
+            i.nombre_ingrediente,
+            i.unidad_medida,
+            i.stock_actual,
+            i.stock_minimo,
+            CASE 
+                WHEN i.stock_actual = 0 THEN 'Agotado'
+                WHEN i.stock_actual <= i.stock_minimo THEN 'Stock Bajo'
+                ELSE 'Normal'
+            END AS estado_stock,
+            (SELECT COUNT(*) FROM Recetas_Producto rp WHERE rp.id_ingrediente = i.id_ingrediente) AS usado_en_productos
+        FROM Ingredientes i
+        ORDER BY i.stock_actual ASC
+    `;
+    const [rows] = await db.execute(query);
+
+    const total = rows.length;
+    const agotados = rows.filter(r => r.estado_stock === 'Agotado').length;
+    const stock_bajo = rows.filter(r => r.estado_stock === 'Stock Bajo').length;
+    const normales = rows.filter(r => r.estado_stock === 'Normal').length;
+
+    return {
+        resumen: { total, agotados, stock_bajo, normales },
+        ingredientes: rows
+    };
+};
 module.exports = {
     getVentasTotales,
-    getProductosMasVendidos
+    getProductosMasVendidos,
+    getReporteInventario
 };
+

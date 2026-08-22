@@ -5,8 +5,11 @@ const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
 
 router.use(verifyToken);
 
+router.get('/', checkRole(['Administrador', 'Mesero']), pedidosController.getPedidos);
+router.get('/mesa/:id', checkRole(['Mesero', 'Administrador']), pedidosController.getCuentaMesa);
+router.get('/:id', checkRole(['Administrador', 'Mesero']), pedidosController.getPedido);
 router.post('/', checkRole(['Mesero']), pedidosController.createPedido);
-router.get('/mesa/:id', checkRole(['Mesero']), pedidosController.getCuentaMesa);
 router.patch('/:id/cancelar', checkRole(['Mesero', 'Administrador']), pedidosController.cancelPedido);
 
 module.exports = router;
+

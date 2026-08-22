@@ -45,8 +45,40 @@ const cancelPedido = async (req, res) => {
     }
 };
 
+
+const getPedidos = async (req, res) => {
+    try {
+        const { estado, fechaInicio, fechaFin, page = 1, limit = 20 } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const result = await pedidoModel.getAllPedidos(estado, fechaInicio, fechaFin, pageNum, limitNum);
+        const total_paginas = Math.ceil(result.total_registros / limitNum);
+        res.json({
+            data: result.data,
+            meta: { total_registros: result.total_registros, total_paginas, pagina_actual: pageNum, limite_por_pagina: limitNum }
+        });
+    } catch (error) {
+        console.error('Error al obtener pedidos:', error);
+        res.status(500).json({ message: 'Error al obtener pedidos' });
+    }
+};
+
+const getPedido = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const pedido = await pedidoModel.getPedidoById(id);
+        if (!pedido) return res.status(404).json({ message: 'Pedido no encontrado' });
+        res.json(pedido);
+    } catch (error) {
+        console.error('Error al obtener pedido:', error);
+        res.status(500).json({ message: 'Error al obtener pedido' });
+    }
+};
 module.exports = {
     createPedido,
     getCuentaMesa,
-    cancelPedido
+    cancelPedido,
+    getPedidos,
+    getPedido
 };
+

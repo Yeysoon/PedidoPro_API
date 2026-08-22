@@ -65,11 +65,26 @@ const saveRecetaProducto = async (id_producto, ingredientes) => {
     }
 };
 
+
+// Alertas de stock bajo (stock_actual <= stock_minimo)
+const getIngredientesStockBajo = async () => {
+    const query = `
+        SELECT id_ingrediente, nombre_ingrediente, unidad_medida, stock_actual, stock_minimo,
+               CASE WHEN stock_actual = 0 THEN 'Agotado' ELSE 'Stock Bajo' END AS alerta
+        FROM Ingredientes
+        WHERE stock_actual <= stock_minimo
+        ORDER BY stock_actual ASC
+    `;
+    const [rows] = await db.execute(query);
+    return rows;
+};
 module.exports = {
     getIngredientes,
     createIngrediente,
     updateIngrediente,
     deleteIngrediente,
     getRecetaProducto,
-    saveRecetaProducto
+    saveRecetaProducto,
+    getIngredientesStockBajo
 };
+

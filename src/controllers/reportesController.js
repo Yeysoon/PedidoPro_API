@@ -41,7 +41,19 @@ const getProductosTop = async (req, res) => {
     }
 };
 
+
+const getReporteInventario = async (req, res) => {
+    try {
+        const reporte = await reportesModel.getReporteInventario();
+        res.json(reporte);
+    } catch (error) {
+        console.error('Error al obtener reporte de inventario:', error);
+        res.status(500).json({ message: 'Error al obtener reporte de inventario' });
+    }
+};
 module.exports = {
     getVentas,
-    getProductosTop
+    getProductosTop,
+    getReporteInventario
 };
+

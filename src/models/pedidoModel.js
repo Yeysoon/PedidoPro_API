@@ -131,8 +131,49 @@ const cancelPedido = async (id_pedido) => {
     }
 };
 
+
+// GET todos los pedidos con filtros (Admin/Mesero)
+const getAllPedidos = async (estado, fechaInicio, fechaFin, page, limit) => {
+    const offset = (page - 1) * limit;
+    let whereClause = '1=1';
+    const params = [];
+
+    if (estado) {
+        whereClause += ' AND ep.nombre_estado = ?';
+        params.push(estado);
+    }
+    if (fechaInicio && fechaFin) {
+        whereClause += ' AND DATE(p.fecha_hora_creacion) BETWEEN ? AND ?';
+        params.push(fechaInicio, fechaFin);
+    }
+
+    const dataQuery = `SELECT p.id_pedido, p.fecha_hora_creacion, p.notas_generales, ep.nombre_estado, m.numero_mesa, u.nombre AS mesero, (SELECT SUM(dp.cantidad * dp.precio_unitario_historico) FROM Detalle_Pedido dp WHERE dp.id_pedido = p.id_pedido) AS total FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado JOIN Mesas m ON p.id_mesa = m.id_mesa JOIN Usuarios u ON p.id_usuario_mesero = u.id_usuario WHERE ${whereClause} ORDER BY p.fecha_hora_creacion DESC LIMIT ? OFFSET ?`;
+    const dataParams = [...params, limit.toString(), offset.toString()];
+    const [rows] = await db.execute(dataQuery, dataParams);
+
+    const countQuery = `SELECT COUNT(*) as total FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE ${whereClause}`;
+    const [countRows] = await db.execute(countQuery, params);
+
+    return { data: rows, total_registros: countRows[0].total };
+};
+
+// GET detalle completo de un pedido por ID
+const getPedidoById = async (id_pedido) => {
+    const [pedidoRows] = await db.execute(`SELECT p.id_pedido, p.fecha_hora_creacion, p.notas_generales, ep.nombre_estado, m.numero_mesa, u.nombre AS mesero FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado JOIN Mesas m ON p.id_mesa = m.id_mesa JOIN Usuarios u ON p.id_usuario_mesero = u.id_usuario WHERE p.id_pedido = ?`, [id_pedido]);
+    if (pedidoRows.length === 0) return null;
+
+    const [detalleRows] = await db.execute(`SELECT dp.id_detalle, dp.cantidad, dp.precio_unitario_historico, dp.notas_especiales, (dp.cantidad * dp.precio_unitario_historico) AS subtotal, prod.nombre_producto, prod.id_producto FROM Detalle_Pedido dp JOIN Productos prod ON dp.id_producto = prod.id_producto WHERE dp.id_pedido = ?`, [id_pedido]);
+
+    const total = detalleRows.reduce((sum, d) => sum + Number(d.subtotal), 0);
+    return { ...pedidoRows[0], detalles: detalleRows, total };
+};
+
 module.exports = {
     createPedido,
     getCuentaMesa,
-    cancelPedido
+    cancelPedido,
+    getAllPedidos,
+    getPedidoById
 };
+
+
