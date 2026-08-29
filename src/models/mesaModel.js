@@ -2,7 +2,7 @@ const db = require('../config/db');
 
 const getAllMesas = async () => {
     const query = `
-        SELECT m.id_mesa, m.numero_mesa, m.capacidad, m.estado, z.nombre_zona
+        SELECT m.id_mesa, m.numero_mesa, m.capacidad, m.estado, m.id_zona, z.nombre_zona
         FROM Mesas m
         JOIN Zonas_Restaurante z ON m.id_zona = z.id_zona
     `;
