@@ -1,4 +1,4 @@
-﻿const authModel = require('../models/authModel');
+const authModel = require('../models/authModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -46,8 +46,39 @@ const login = async (req, res) => {
     }
 };
 
-module.exports = {
-    login
+const changeMyPassword = async (req, res) => {
+    try {
+        const { password_actual, nueva_password } = req.body;
+        const id_usuario = req.user.id;
+
+        if (!password_actual || !nueva_password || nueva_password.length < 6) {
+            return res.status(400).json({ message: 'Se requiere la contrasea actual y la nueva debe tener al menos 6 caracteres' });
+        }
+
+        const user = await authModel.getUserByIdForAuth(id_usuario);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        const isMatch = await bcrypt.compare(password_actual, user.contrasena_hash);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'La contrasea actual es incorrecta' });
+        }
+
+        const usuarioModel = require('../models/usuarioModel');
+        await usuarioModel.updatePassword(id_usuario, nueva_password);
+
+        res.json({ message: 'Contrasea cambiada exitosamente' });
+    } catch (error) {
+        console.error('Error al cambiar mi contrasea:', error);
+        res.status(500).json({ message: 'Error del servidor: ' + error.message });
+    }
 };
+
+module.exports = {
+    login,
+    changeMyPassword
+};
+
 
 

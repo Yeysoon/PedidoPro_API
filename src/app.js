@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
@@ -13,6 +13,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+app.use('/public', express.static('public'));
 app.use(morgan('dev')); // Logging HTTP en consola
 
 // Swagger UI
@@ -30,6 +31,7 @@ const usuarioRoutes = require('./routes/usuarioRoutes');
 const inventarioRoutes = require('./routes/inventarioRoutes');
 const clienteRoutes = require('./routes/clienteRoutes');
 const rolesRoutes = require('./routes/rolesRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 // Definir endpoints base
 app.use('/api/auth', authRoutes);
@@ -43,6 +45,7 @@ app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/roles', rolesRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 const db = require('./config/db');
 
@@ -69,4 +72,6 @@ app.get('/', (req, res) => {
 });
 
 module.exports = app;
+
+
 

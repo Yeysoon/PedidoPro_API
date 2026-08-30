@@ -9,7 +9,9 @@ router.get('/pedidos-listos', checkRole(['Cajero', 'Administrador']), cajaContro
 router.post('/facturar', checkRole(['Cajero']), cajaController.facturar);
 router.get('/facturas', checkRole(['Cajero', 'Administrador']), cajaController.getFacturas);
 router.get('/facturas/:id', checkRole(['Cajero', 'Administrador']), cajaController.getFacturaById);
+router.get('/facturas/:id/pdf', checkRole(['Cajero', 'Administrador']), cajaController.getFacturaPDF);
 router.delete('/facturas/:id/anular', checkRole(['Administrador']), cajaController.anularFactura);
 
 module.exports = router;
+
 
