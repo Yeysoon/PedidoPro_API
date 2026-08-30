@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
@@ -44,8 +44,29 @@ app.use('/api/inventario', inventarioRoutes);
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/roles', rolesRoutes);
 
+const db = require('./config/db');
+
+app.get('/api/health', async (req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT COUNT(*) as total_usuarios FROM Usuarios');
+        res.json({
+            status: 'online',
+            db_connected: true,
+            total_usuarios: rows[0].total_usuarios,
+            timestamp: new Date().toISOString()
+        });
+    } catch (e) {
+        res.status(500).json({
+            status: 'error',
+            db_connected: false,
+            error: e.message
+        });
+    }
+});
+
 app.get('/', (req, res) => {
     res.send('API de PedidoPro funcionando correctamente.');
 });
 
 module.exports = app;
+

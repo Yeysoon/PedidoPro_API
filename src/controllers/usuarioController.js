@@ -1,4 +1,4 @@
-const usuarioModel = require('../models/usuarioModel');
+﻿const usuarioModel = require('../models/usuarioModel');
 
 const getUsuarios = async (req, res) => {
     try {
@@ -34,7 +34,7 @@ const createUsuario = async (req, res) => {
         res.status(201).json({ message: 'Usuario creado exitosamente', id_usuario: id });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ message: 'El correo electrónico ya está registrado' });
+            return res.status(400).json({ message: 'El correo electrÃ³nico ya estÃ¡ registrado' });
         }
         res.status(500).json({ message: 'Error al crear usuario' });
     }
@@ -60,10 +60,18 @@ const updateUsuario = async (req, res) => {
 const toggleUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { activo } = req.body; // true or false
-        await usuarioModel.toggleActivo(id, activo ? 1 : 0);
-        res.json({ message: `Usuario ${activo ? 'activado' : 'desactivado'} exitosamente` });
+        let { activo } = req.body;
+        if (activo === undefined) {
+            const user = await usuarioModel.getUsuarioById(id);
+            if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
+            activo = user.activo ? 0 : 1;
+        } else {
+            activo = activo ? 1 : 0;
+        }
+        await usuarioModel.toggleActivo(id, activo);
+        res.json({ message: `Usuario ${activo ? 'activado' : 'desactivado'} exitosamente`, activo: !!activo });
     } catch (error) {
+        console.error('Error al cambiar estado:', error);
         res.status(500).json({ message: 'Error al cambiar estado del usuario' });
     }
 };
