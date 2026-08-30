@@ -1,25 +1,41 @@
 const db = require('../config/db');
 
 const getVentasTotales = async (fechaInicio, fechaFin, limit, offset) => {
-    // 1. Obtener los datos paginados
-    const query = `
-        SELECT DATE(fecha_hora_pago) as fecha, SUM(total_pagado) as total_ventas, COUNT(id_factura) as cantidad_pedidos
+    let whereClause = '';
+    const params = [];
+
+    if (fechaInicio && fechaFin) {
+        whereClause = 'WHERE DATE(fecha_hora_pago) BETWEEN ? AND ?';
+        params.push(fechaInicio, fechaFin);
+    }
+
+    let query = `
+        SELECT DATE_FORMAT(fecha_hora_pago, '%Y-%m-%d') as fecha, 
+               CAST(SUM(total_pagado) AS DECIMAL(10,2)) as total_ventas, 
+               COUNT(id_factura) as cantidad_facturas,
+               COUNT(id_factura) as cantidad_pedidos
         FROM Facturas_Pagos
-        WHERE DATE(fecha_hora_pago) BETWEEN ? AND ?
-        GROUP BY DATE(fecha_hora_pago)
-        ORDER BY fecha DESC
-        LIMIT ? OFFSET ?
+        ${whereClause}
+        GROUP BY DATE_FORMAT(fecha_hora_pago, '%Y-%m-%d')
+        ORDER BY fecha ASC
     `;
-    const [rows] = await db.execute(query, [fechaInicio, fechaFin, limit.toString(), offset.toString()]);
+
+    if (limit && offset !== undefined) {
+        query += ' LIMIT ? OFFSET ?';
+        params.push(limit.toString(), offset.toString());
+    }
+
+    const [rows] = await db.execute(query, params);
     
-    // 2. Obtener el total de registros para calcular las páginas
+    // 2. Obtener el total de registros
     const countQuery = `
-        SELECT COUNT(DISTINCT DATE(fecha_hora_pago)) as total_rows
+        SELECT COUNT(DISTINCT DATE_FORMAT(fecha_hora_pago, '%Y-%m-%d')) as total_rows
         FROM Facturas_Pagos
-        WHERE DATE(fecha_hora_pago) BETWEEN ? AND ?
+        ${whereClause}
     `;
-    const [countRows] = await db.execute(countQuery, [fechaInicio, fechaFin]);
-    const total_registros = countRows[0].total_rows;
+    const countParams = fechaInicio && fechaFin ? [fechaInicio, fechaFin] : [];
+    const [countRows] = await db.execute(countQuery, countParams);
+    const total_registros = countRows[0]?.total_rows || 0;
 
     return {
         data: rows,
@@ -29,13 +45,13 @@ const getVentasTotales = async (fechaInicio, fechaFin, limit, offset) => {
 
 const getProductosMasVendidos = async () => {
     const query = `
-        SELECT p.nombre_producto, SUM(dp.cantidad) as total_vendido
+        SELECT p.nombre_producto, CAST(SUM(dp.cantidad) AS SIGNED) as total_vendido
         FROM Detalle_Pedido dp
         JOIN Productos p ON dp.id_producto = p.id_producto
         JOIN Pedidos ped ON dp.id_pedido = ped.id_pedido
         JOIN Estados_Pedido ep ON ped.id_estado = ep.id_estado
         WHERE ep.nombre_estado = 'Servido'
-        GROUP BY p.id_producto
+        GROUP BY p.id_producto, p.nombre_producto
         ORDER BY total_vendido DESC
         LIMIT 10
     `;

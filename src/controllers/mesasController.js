@@ -35,24 +35,36 @@ const updateEstado = async (req, res) => {
 
 const createMesa = async (req, res) => {
     try {
-        const { id_zona, numero_mesa, capacidad } = req.body;
-        if (!id_zona || !numero_mesa || !capacidad) return res.status(400).json({ message: 'Todos los campos son obligatorios' });
-        const id = await mesaModel.createMesa({ id_zona, numero_mesa, capacidad });
-        res.status(201).json({ message: 'Mesa creada', id_mesa: id });
+        const { id_zona, numero_mesa, capacidad, estado } = req.body;
+        if (!id_zona || !numero_mesa || !capacidad) {
+            return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+        }
+        const id = await mesaModel.createMesa({ id_zona, numero_mesa, capacidad, estado });
+        res.status(201).json({ message: 'Mesa creada exitosamente', id_mesa: id });
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ message: 'El número de mesa ya existe' });
-        res.status(500).json({ message: 'Error al crear mesa' });
+        console.error('Error al crear mesa:', error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: 'El número de mesa ya existe' });
+        }
+        if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.code === 'ER_NO_REFERENCED_ROW') {
+            return res.status(400).json({ message: 'La zona seleccionada no existe' });
+        }
+        res.status(500).json({ message: error.sqlMessage || 'Error al crear mesa' });
     }
 };
 
 const updateMesa = async (req, res) => {
     try {
         const { id } = req.params;
-        const { id_zona, numero_mesa, capacidad } = req.body;
-        await mesaModel.updateMesa(id, { id_zona, numero_mesa, capacidad });
-        res.json({ message: 'Mesa actualizada' });
+        const { id_zona, numero_mesa, capacidad, estado } = req.body;
+        await mesaModel.updateMesa(id, { id_zona, numero_mesa, capacidad, estado });
+        res.json({ message: 'Mesa actualizada exitosamente' });
     } catch (error) {
-        res.status(500).json({ message: 'Error al actualizar mesa' });
+        console.error('Error al actualizar mesa:', error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: 'El número de mesa ya existe' });
+        }
+        res.status(500).json({ message: error.sqlMessage || 'Error al actualizar mesa' });
     }
 };
 

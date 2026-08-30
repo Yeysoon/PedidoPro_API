@@ -40,8 +40,16 @@ const deleteProducto = async (id) => {
 
 // Categorias
 const getCategorias = async () => {
-    const query = `SELECT * FROM Categorias_Menu`;
-    const [rows] = await db.execute(query);
+    const query = `SELECT * FROM Categorias_Menu ORDER BY id_categoria ASC`;
+    let [rows] = await db.execute(query);
+    if (!rows || rows.length === 0) {
+        const defaults = ['Platos Fuertes', 'Bebidas', 'Postres', 'Entradas', 'Pastas', 'Pizzas', 'Sopas', 'Mariscos'];
+        for (const c of defaults) {
+            await db.execute(`INSERT IGNORE INTO Categorias_Menu (nombre_categoria) VALUES (?)`, [c]);
+        }
+        const [seeded] = await db.execute(query);
+        return seeded;
+    }
     return rows;
 };
 
