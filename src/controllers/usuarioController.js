@@ -1,4 +1,4 @@
-﻿const usuarioModel = require('../models/usuarioModel');
+const usuarioModel = require('../models/usuarioModel');
 
 const getUsuarios = async (req, res) => {
     try {
@@ -80,15 +80,15 @@ const toggleUser = async (req, res) => {
 const changePassword = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nueva_password } = req.body;
-        if (!nueva_password || nueva_password.length < 6) {
-            return res.status(400).json({ message: 'La nueva contrasena debe tener al menos 6 caracteres' });
+        const newPwd = req.body.nueva_password || req.body.password || req.body.contrasena;
+        if (!newPwd || newPwd.trim().length < 6) {
+            return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres' });
         }
-        await usuarioModel.updatePassword(id, nueva_password);
-        res.json({ message: 'Contrasena actualizada exitosamente' });
+        await usuarioModel.updatePassword(id, newPwd.trim());
+        res.json({ message: 'Contraseña actualizada exitosamente' });
     } catch (error) {
-        console.error('Error al cambiar contrasena:', error);
-        res.status(500).json({ message: 'Error al cambiar contrasena' });
+        console.error('Error al cambiar contraseña:', error);
+        res.status(500).json({ message: error.message || 'Error al cambiar contraseña' });
     }
 };
 module.exports = {

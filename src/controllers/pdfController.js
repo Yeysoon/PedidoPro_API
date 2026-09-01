@@ -22,29 +22,31 @@ const getFacturaPDF = async (req, res) => {
         doc.moveDown(0.5);
         
         // Datos factura
-        doc.fontSize(10).text(`Factura N°: ${factura.id_factura});
-        doc.text(`Fecha: ${new Date(factura.fecha_hora_pago).toLocaleString()});
-        doc.text(`Cajero: ${factura.cajero});
-        doc.text(`Cliente: ${factura.cliente || 'Consumidor Final'});
+        doc.fontSize(10).text(`Factura N°: ${factura.id_factura}`);
+        doc.text(`Fecha: ${new Date(factura.fecha_hora_pago).toLocaleString()}`);
+        doc.text(`Cajero: ${factura.cajero}`);
+        doc.text(`Cliente: ${factura.cliente || 'Consumidor Final'}`);
         doc.moveDown(0.5);
         doc.text('------------------------------------------', { align: 'center' });
         doc.moveDown(0.5);
 
         // Productos
         doc.fontSize(10);
-        factura.detalle_productos.forEach(p => {
-            doc.text(`x   -  {p.subtotal}`);
-        });
+        if (Array.isArray(factura.detalle_productos)) {
+            factura.detalle_productos.forEach(p => {
+                doc.text(`${p.cantidad || 1}x ${p.nombre_producto || p.nombre || 'Producto'} - $${p.subtotal || 0}`);
+            });
+        }
         
         doc.moveDown(0.5);
         doc.text('------------------------------------------', { align: 'center' });
         doc.moveDown(0.5);
         
         // Totales
-        doc.text(`Subtotal: {factura.subtotal}`, { align: 'right' });
-        doc.text(`Impuestos: {factura.impuestos}`, { align: 'right' });
-        doc.text(`Propina: {factura.propina}`, { align: 'right' });
-        doc.fontSize(12).text(`TOTAL: {factura.total_pagado}`, { align: 'right' });
+        doc.text(`Subtotal: $${factura.subtotal || 0}`, { align: 'right' });
+        doc.text(`Impuestos: $${factura.impuestos || 0}`, { align: 'right' });
+        doc.text(`Propina: $${factura.propina || 0}`, { align: 'right' });
+        doc.fontSize(12).text(`TOTAL: $${factura.total_pagado || 0}`, { align: 'right' });
         
         doc.moveDown(1);
         doc.fontSize(10).text('¡Gracias por su compra!', { align: 'center' });
@@ -57,4 +59,6 @@ const getFacturaPDF = async (req, res) => {
     }
 };
 
-module.exports = getFacturaPDF;
+module.exports = {
+    getFacturaPDF
+};

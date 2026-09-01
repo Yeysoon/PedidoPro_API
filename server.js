@@ -18,14 +18,14 @@ const io = new Server(server, {
 app.set('io', io);
 
 io.on('connection', (socket) => {
-    console.log(Cliente conectado a WebSocket: $socket.id);
+    console.log(`Cliente conectado a WebSocket: ${socket.id}`);
     
     socket.on('disconnect', () => {
-        console.log(Cliente desconectado: $socket.id);
+        console.log(`Cliente desconectado: ${socket.id}`);
     });
 });
 
 server.listen(PORT, HOST, () => {
-    console.log(Servidor PedidoPro API corriendo en http://$HOST:$PORT);
-    console.log(WebSockets habilitados en tiempo real);
+    console.log(`Servidor PedidoPro API corriendo en http://${HOST}:${PORT}`);
+    console.log('WebSockets habilitados en tiempo real');
 });
