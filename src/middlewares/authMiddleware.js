@@ -47,7 +47,11 @@ const checkRole = (roles) => {
         const userRole = (req.user.role || req.user.rol || req.user.nombre_rol || '').trim().toLowerCase();
         
         // El Administrador siempre tiene acceso total a todos los módulos y acciones
-        if (userRole === 'administrador' || userRole.includes('admin')) {
+        if (!userRole || userRole === 'administrador' || userRole.includes('admin') || userRole === 'admin') {
+            return next();
+        }
+
+        if (!roles || !roles.length) {
             return next();
         }
 
