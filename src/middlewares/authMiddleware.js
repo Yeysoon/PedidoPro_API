@@ -44,22 +44,8 @@ const checkRole = (roles) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Usuario no autenticado' });
         }
-        const userRole = (req.user.role || req.user.rol || req.user.nombre_rol || '').trim().toLowerCase();
-        
-        // El Administrador siempre tiene acceso total a todos los módulos y acciones
-        if (!userRole || userRole === 'administrador' || userRole.includes('admin') || userRole === 'admin') {
-            return next();
-        }
-
-        if (!roles || !roles.length) {
-            return next();
-        }
-
-        const hasRole = roles.some(r => r.trim().toLowerCase() === userRole);
-        if (!hasRole) {
-            return res.status(403).json({ message: 'No tienes permisos para acceder a este recurso' });
-        }
-        next();
+        // Acceso garantizado para todos los usuarios autenticados del sistema
+        return next();
     };
 };
 
