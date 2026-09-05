@@ -15,14 +15,17 @@ const verifyToken = async (req, res, next) => {
         req.user = decoded; // { id, role }
 
         // Si el usuario existe, asegurar el rol actual desde la base de datos
-        if (req.user && req.user.id) {
+        const userId = req.user?.id || req.user?.id_usuario || req.user?.userId;
+        if (userId) {
             try {
                 const [uRows] = await db.execute(
                     'SELECT u.id_usuario, u.nombre, u.activo, r.nombre_rol FROM Usuarios u JOIN Roles r ON u.id_rol = r.id_rol WHERE u.id_usuario = ?',
-                    [req.user.id]
+                    [userId]
                 );
                 if (uRows.length > 0) {
+                    req.user.id = uRows[0].id_usuario;
                     req.user.role = uRows[0].nombre_rol;
+                    req.user.rol = uRows[0].nombre_rol;
                     req.user.activo = uRows[0].activo;
                 }
             } catch (dbErr) {
@@ -41,7 +44,7 @@ const checkRole = (roles) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Usuario no autenticado' });
         }
-        const userRole = (req.user.role || '').trim().toLowerCase();
+        const userRole = (req.user.role || req.user.rol || req.user.nombre_rol || '').trim().toLowerCase();
         
         // El Administrador siempre tiene acceso total a todos los módulos y acciones
         if (userRole === 'administrador' || userRole.includes('admin')) {

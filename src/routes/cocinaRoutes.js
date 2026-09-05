@@ -5,7 +5,7 @@ const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
 
 router.use(verifyToken);
 
-router.get('/comandas', checkRole(['Cocinero', 'Administrador']), cocinaController.getComandas);
-router.patch('/comandas/:id/estado', checkRole(['Cocinero', 'Administrador']), cocinaController.updateEstado);
+router.get('/comandas', checkRole(['Cocinero', 'Administrador', 'Mesero', 'Cajero']), cocinaController.getComandas);
+router.patch('/comandas/:id/estado', checkRole(['Cocinero', 'Administrador', 'Mesero', 'Cajero']), cocinaController.updateEstado);
 
 module.exports = router;
