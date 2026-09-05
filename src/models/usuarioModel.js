@@ -3,9 +3,10 @@ const bcrypt = require('bcryptjs');
 
 const getAllUsuarios = async () => {
     const query = `
-        SELECT u.id_usuario, u.nombre, u.email, u.activo, r.nombre_rol 
+        SELECT u.id_usuario, u.nombre, u.email, u.activo, u.id_rol, r.nombre_rol 
         FROM Usuarios u
         JOIN Roles r ON u.id_rol = r.id_rol
+        ORDER BY u.id_usuario ASC
     `;
     const [rows] = await db.execute(query);
     return rows;
