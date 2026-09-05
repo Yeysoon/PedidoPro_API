@@ -2,7 +2,8 @@ const dashboardModel = require('../models/dashboardModel');
 
 const getAdminDashboard = async (req, res) => {
     try {
-        const stats = await dashboardModel.getAdminStats();
+        const period = req.query.period || 'monthly';
+        const stats = await dashboardModel.getAdminStats(period);
         res.json({ success: true, data: stats });
     } catch (error) {
         console.error('Error al obtener dashboard admin:', error);
@@ -33,7 +34,8 @@ const getCocinaDashboard = async (req, res) => {
 
 const getCajaDashboard = async (req, res) => {
     try {
-        const stats = await dashboardModel.getCajaStats();
+        const period = req.query.period || 'monthly';
+        const stats = await dashboardModel.getCajaStats(period);
         res.json({ success: true, data: stats });
     } catch (error) {
         console.error('Error al obtener dashboard caja:', error);

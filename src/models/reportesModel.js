@@ -68,10 +68,10 @@ const getReporteInventario = async () => {
             i.nombre_ingrediente,
             i.unidad_medida,
             i.stock_actual,
-            i.stock_minimo,
+            10 AS stock_minimo,
             CASE 
                 WHEN i.stock_actual = 0 THEN 'Agotado'
-                WHEN i.stock_actual <= i.stock_minimo THEN 'Stock Bajo'
+                WHEN i.stock_actual <= 10 THEN 'Stock Bajo'
                 ELSE 'Normal'
             END AS estado_stock,
             (SELECT COUNT(*) FROM Recetas_Producto rp WHERE rp.id_ingrediente = i.id_ingrediente) AS usado_en_productos
