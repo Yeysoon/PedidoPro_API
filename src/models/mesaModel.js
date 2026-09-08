@@ -2,9 +2,10 @@ const db = require('../config/db');
 
 const getAllMesas = async () => {
     const query = `
-        SELECT m.id_mesa, m.numero_mesa, m.capacidad, m.estado, m.id_zona, z.nombre_zona
+        SELECT m.id_mesa, m.numero_mesa, m.capacidad, m.estado, m.id_zona, COALESCE(z.nombre_zona, 'Salón Principal') AS nombre_zona
         FROM Mesas m
-        JOIN Zonas_Restaurante z ON m.id_zona = z.id_zona
+        LEFT JOIN Zonas_Restaurante z ON m.id_zona = z.id_zona
+        ORDER BY m.numero_mesa ASC
     `;
     const [rows] = await db.execute(query);
     return rows;
