@@ -14,7 +14,7 @@ const getPedidosListos = async () => {
         LEFT JOIN Clientes c ON p.id_cliente = c.id_cliente
         LEFT JOIN Detalle_Pedido dp ON p.id_pedido = dp.id_pedido
         LEFT JOIN Productos prod ON dp.id_producto = prod.id_producto
-        WHERE (ep.nombre_estado = 'Servido' OR ep.id_estado = 4)
+        WHERE ep.nombre_estado = 'Servido'
           AND p.id_pedido NOT IN (SELECT id_pedido FROM Facturas_Pagos)
         ORDER BY p.fecha_hora_creacion ASC
     `;

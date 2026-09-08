@@ -230,7 +230,7 @@ const getCocinaStats = async (period = 'monthly') => {
 const getCajaStats = async (period = 'monthly') => {
     const periodWhere = getPeriodCondition(period, 'fecha_hora_pago');
     const periodWherePed = getPeriodCondition(period, 'ped.fecha_hora_creacion');
-    const [pedidosListos] = await db.execute(`SELECT COUNT(*) as listos FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE (ep.nombre_estado = 'Servido' OR ep.id_estado = 4) AND p.id_pedido NOT IN (SELECT id_pedido FROM Facturas_Pagos)`);
+    const [pedidosListos] = await db.execute(`SELECT COUNT(*) as listos FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE ep.nombre_estado = 'Servido' AND p.id_pedido NOT IN (SELECT id_pedido FROM Facturas_Pagos)`);
     const [cajaHoy] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS total_ingresado, COUNT(*) as facturas_emitidas FROM Facturas_Pagos WHERE DATE(fecha_hora_pago) = CURDATE()`);
     const [cajaPeriodo] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS total_periodo, COUNT(*) as facturas_periodo FROM Facturas_Pagos WHERE ${periodWhere}`);
 
