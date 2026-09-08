@@ -25,7 +25,8 @@ const getMeseroDashboard = async (req, res) => {
 
 const getCocinaDashboard = async (req, res) => {
     try {
-        const stats = await dashboardModel.getCocinaStats();
+        const period = req.query.period || 'monthly';
+        const stats = await dashboardModel.getCocinaStats(period);
         res.json({ success: true, data: stats });
     } catch (error) {
         console.error('Error al obtener dashboard cocina:', error);

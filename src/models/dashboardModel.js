@@ -205,10 +205,11 @@ const getMeseroStats = async (id_usuario_mesero, period = 'monthly') => {
     };
 };
 
-const getCocinaStats = async () => {
+const getCocinaStats = async (period = 'monthly') => {
+    const periodWhereP = getPeriodCondition(period, 'p.fecha_hora_creacion');
     const [comandasPendientes] = await db.execute(`SELECT COUNT(*) as pendientes FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE ep.nombre_estado = 'Pendiente'`);
     const [comandasEnPreparacion] = await db.execute(`SELECT COUNT(*) as en_preparacion FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE ep.nombre_estado = 'En Preparación'`);
-    const [comandasListasHoy] = await db.execute(`SELECT COUNT(*) as listas_hoy FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE ep.nombre_estado IN ('Listo', 'Servido') AND DATE(p.fecha_hora_creacion) = CURDATE()`);
+    const [comandasListasPeriodo] = await db.execute(`SELECT COUNT(*) as listas_periodo FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE ep.nombre_estado IN ('Listo', 'Servido') AND ${periodWhereP}`);
     
     const [alertasInsumos] = await db.execute(`
         SELECT id_ingrediente, nombre_ingrediente, unidad_medida, stock_actual, 10 as stock_minimo
@@ -220,7 +221,8 @@ const getCocinaStats = async () => {
     return { 
         comandas_pendientes: comandasPendientes[0]?.pendientes || 0, 
         comandas_en_preparacion: comandasEnPreparacion[0]?.en_preparacion || 0,
-        comandas_listas_hoy: comandasListasHoy[0]?.listas_hoy || 0,
+        comandas_listas_hoy: comandasListasPeriodo[0]?.listas_periodo || 0,
+        comandas_listas_periodo: comandasListasPeriodo[0]?.listas_periodo || 0,
         insumos_criticos: alertasInsumos
     };
 };
