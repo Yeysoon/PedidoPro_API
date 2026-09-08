@@ -8,10 +8,11 @@ const getComandasPendientes = async () => {
         FROM Pedidos p
         JOIN Mesas m ON p.id_mesa = m.id_mesa
         JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado
-        JOIN Detalle_Pedido dp ON p.id_pedido = dp.id_pedido
-        JOIN Productos prod ON dp.id_producto = prod.id_producto
+        LEFT JOIN Detalle_Pedido dp ON p.id_pedido = dp.id_pedido
+        LEFT JOIN Productos prod ON dp.id_producto = prod.id_producto
         LEFT JOIN Usuarios u ON p.id_usuario_mesero = u.id_usuario
-        WHERE ep.nombre_estado IN ('Pendiente', 'En Preparación', 'Listo', 'Servido')
+        WHERE ep.id_estado IN (1, 2, 3, 4)
+           OR ep.nombre_estado IN ('Pendiente', 'En Preparación', 'Listo', 'Servido')
         ORDER BY p.fecha_hora_creacion ASC
     `;
     const [rows] = await db.execute(query);
@@ -29,19 +30,21 @@ const getComandasPendientes = async () => {
                 numero_mesa: row.numero_mesa,
                 nombre_estado: row.nombre_estado,
                 estado: row.nombre_estado,
-                id_estado: row.id_estado,
+                id_estado: Number(row.id_estado),
                 mesero: row.mesero_nombre,
                 detalles: []
             };
             comandasMap.set(row.id_pedido, nuevaComanda);
             comandas.push(nuevaComanda);
         }
-        comandasMap.get(row.id_pedido).detalles.push({
-            id_detalle: row.id_detalle,
-            nombre_producto: row.nombre_producto,
-            cantidad: row.cantidad,
-            notas_especiales: row.notas_especiales
-        });
+        if (row.id_detalle && row.nombre_producto) {
+            comandasMap.get(row.id_pedido).detalles.push({
+                id_detalle: row.id_detalle,
+                nombre_producto: row.nombre_producto,
+                cantidad: row.cantidad || 1,
+                notas_especiales: row.notas_especiales
+            });
+        }
     });
 
     return comandas;
@@ -55,8 +58,13 @@ const updateEstadoComanda = async (id_pedido, estado_nombre) => {
             id_estado = estado_nombre;
         } else {
             const [estadoRows] = await connection.execute(`SELECT id_estado FROM Estados_Pedido WHERE nombre_estado = ?`, [estado_nombre]);
-            if (estadoRows.length === 0) throw new Error(`Estado '${estado_nombre}' no encontrado.`);
-            id_estado = estadoRows[0].id_estado;
+            if (estadoRows.length === 0) {
+                // Fallback por nombre normalizado
+                const map = { 'Pendiente': 1, 'En Preparación': 2, 'Listo': 3, 'Servido': 4 };
+                id_estado = map[estado_nombre] || 1;
+            } else {
+                id_estado = estadoRows[0].id_estado;
+            }
         }
 
         const [result] = await connection.execute(`UPDATE Pedidos SET id_estado = ? WHERE id_pedido = ?`, [id_estado, id_pedido]);
