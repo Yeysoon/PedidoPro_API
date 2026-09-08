@@ -27,8 +27,14 @@ const createCliente = async (req, res) => {
             return res.status(400).json({ message: 'El nombre es obligatorio' });
         }
         
-        const id = await clienteModel.createCliente({ nit_documento, nombre_completo });
-        res.status(201).json({ message: 'Cliente registrado', id_cliente: id });
+        const result = await clienteModel.createCliente({ nit_documento, nombre_completo });
+        const id_cliente = (result && typeof result === 'object') ? result.id_cliente : result;
+        const isExisting = result && result.existing;
+
+        res.status(201).json({ 
+            message: isExisting ? 'Cliente asignado correctamente' : 'Cliente registrado exitosamente', 
+            id_cliente: id_cliente 
+        });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ message: 'El NIT o documento ya está registrado' });
