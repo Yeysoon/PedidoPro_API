@@ -2,10 +2,11 @@ const db = require('../config/db');
 
 const getMenu = async () => {
     const query = `
-        SELECT p.id_producto, p.nombre_producto, p.descripcion, p.precio, p.disponible, c.nombre_categoria
+        SELECT p.id_producto, p.id_categoria, p.nombre_producto, p.descripcion, p.precio, p.disponible, COALESCE(c.nombre_categoria, 'General') AS nombre_categoria
         FROM Productos p
-        JOIN Categorias_Menu c ON p.id_categoria = c.id_categoria
+        LEFT JOIN Categorias_Menu c ON p.id_categoria = c.id_categoria
         WHERE p.disponible = 1
+        ORDER BY p.id_producto ASC
     `;
     const [rows] = await db.execute(query);
     return rows;
@@ -43,7 +44,7 @@ const getCategorias = async () => {
     const query = `SELECT * FROM Categorias_Menu ORDER BY id_categoria ASC`;
     let [rows] = await db.execute(query);
     if (!rows || rows.length === 0) {
-        const defaults = ['Platos Fuertes', 'Bebidas', 'Postres', 'Entradas', 'Pastas', 'Pizzas', 'Sopas', 'Mariscos'];
+        const defaults = ['Entradas', 'Bebidas', 'Platos Fuertes', 'Postres'];
         for (const c of defaults) {
             await db.execute(`INSERT IGNORE INTO Categorias_Menu (nombre_categoria) VALUES (?)`, [c]);
         }
