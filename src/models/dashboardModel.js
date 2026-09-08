@@ -1,20 +1,22 @@
 const db = require('../config/db');
 
-// Helper para filtrar por período
+// Helper para filtrar por período del calendario actual
 const getPeriodCondition = (period, column = 'fecha_hora_pago') => {
     if (period === 'weekly') {
-        return `DATE(${column}) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`;
+        return `YEARWEEK(${column}, 1) = YEARWEEK(CURDATE(), 1)`;
     } else if (period === 'yearly') {
-        return `DATE(${column}) >= DATE_SUB(CURDATE(), INTERVAL 365 DAY)`;
+        return `YEAR(${column}) = YEAR(CURDATE())`;
     } else {
-        // Mensual por defecto (últimos 30 días)
-        return `DATE(${column}) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`;
+        // Mensual por defecto (mes y año actual)
+        return `YEAR(${column}) = YEAR(CURDATE()) AND MONTH(${column}) = MONTH(CURDATE())`;
     }
 };
 
 const getAdminStats = async (period = 'monthly') => {
     const periodWhereFP = getPeriodCondition(period, 'fp.fecha_hora_pago');
     const periodWhereStandalone = getPeriodCondition(period, 'fecha_hora_pago');
+    const periodWherePed = getPeriodCondition(period, 'ped.fecha_hora_creacion');
+    const periodWhereP = getPeriodCondition(period, 'p.fecha_hora_creacion');
 
     // 1. Métricas generales / KPIs
     const [ventasHoyRows] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS ventas_hoy FROM Facturas_Pagos WHERE DATE(fecha_hora_pago) = CURDATE()`);
@@ -72,7 +74,7 @@ const getAdminStats = async (period = 'monthly') => {
         };
     });
 
-    // 4. Platillos Más Pedidos (Top 5)
+    // 4. Platillos Más Pedidos en el período seleccionado (Top 5)
     const [topDishesRows] = await db.execute(`
         SELECT 
             p.id_producto,
@@ -85,13 +87,13 @@ const getAdminStats = async (period = 'monthly') => {
         JOIN Categorias_Menu c ON p.id_categoria = c.id_categoria
         JOIN Pedidos ped ON dp.id_pedido = ped.id_pedido
         JOIN Estados_Pedido ep ON ped.id_estado = ep.id_estado
-        WHERE ep.nombre_estado != 'Cancelado'
+        WHERE ep.nombre_estado != 'Cancelado' AND ${periodWherePed}
         GROUP BY p.id_producto, p.nombre_producto, c.nombre_categoria
         ORDER BY total_vendido DESC
         LIMIT 5
     `);
 
-    // 5. Actividad Reciente de Comandas (Últimas órdenes en vivo)
+    // 5. Actividad Reciente de Comandas en el período seleccionado
     const [recentOrdersRows] = await db.execute(`
         SELECT 
             p.id_pedido,
@@ -111,6 +113,7 @@ const getAdminStats = async (period = 'monthly') => {
         LEFT JOIN Zonas_Restaurante z ON m.id_zona = z.id_zona
         JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado
         LEFT JOIN Facturas_Pagos fp ON p.id_pedido = fp.id_pedido
+        WHERE ${periodWhereP}
         ORDER BY p.id_pedido DESC
         LIMIT 25
     `);
