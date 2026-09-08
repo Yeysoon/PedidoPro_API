@@ -17,6 +17,23 @@ const createPedido = async (req, res) => {
     }
 };
 
+const updatePedido = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { id_mesa, notas_generales, detalles, id_cliente } = req.body;
+
+        if (!id_mesa || !detalles || !detalles.length) {
+            return res.status(400).json({ message: 'Mesa y detalles del pedido son obligatorios' });
+        }
+
+        await pedidoModel.updatePedido(id, id_mesa, notas_generales, detalles, id_cliente);
+        res.json({ message: 'Pedido actualizado exitosamente', id_pedido: id });
+    } catch (error) {
+        console.error('Error al actualizar pedido:', error);
+        res.status(400).json({ message: error.message || 'Error al actualizar pedido' });
+    }
+};
+
 const getCuentaMesa = async (req, res) => {
     try {
         const { id } = req.params;
@@ -76,6 +93,7 @@ const getPedido = async (req, res) => {
 };
 module.exports = {
     createPedido,
+    updatePedido,
     getCuentaMesa,
     cancelPedido,
     getPedidos,
