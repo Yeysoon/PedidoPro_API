@@ -4,7 +4,6 @@ const app = require('./src/app');
 const { Server } = require('socket.io');
 
 const PORT = process.env.PORT || 8080;
-const HOST = '0.0.0.0';
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -25,7 +24,7 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, HOST, () => {
-    console.log(`Servidor PedidoPro API corriendo en http://${HOST}:${PORT}`);
+server.listen(PORT, () => {
+    console.log(`Servidor PedidoPro API corriendo en puerto ${PORT} (IPv4 y IPv6 habilitados)`);
     console.log('WebSockets habilitados en tiempo real');
 });
