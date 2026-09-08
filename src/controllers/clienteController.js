@@ -22,26 +22,34 @@ const getCliente = async (req, res) => {
 
 const createCliente = async (req, res) => {
     try {
-        const { nit_documento, nombre_completo, correo_electronico, telefono } = req.body;
-        if (!nombre_completo) return res.status(400).json({ message: 'El nombre es obligatorio' });
+        const { nit_documento, nombre_completo } = req.body;
+        if (!nombre_completo || !nombre_completo.trim()) {
+            return res.status(400).json({ message: 'El nombre es obligatorio' });
+        }
         
-        const id = await clienteModel.createCliente({ nit_documento, nombre_completo, correo_electronico, telefono });
+        const id = await clienteModel.createCliente({ nit_documento, nombre_completo });
         res.status(201).json({ message: 'Cliente registrado', id_cliente: id });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ message: 'El NIT o documento ya está registrado' });
         }
-        res.status(500).json({ message: 'Error al crear cliente' });
+        res.status(500).json({ message: 'Error al crear cliente: ' + (error.message || '') });
     }
 };
 
 const updateCliente = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nit_documento, nombre_completo, correo_electronico, telefono } = req.body;
-        await clienteModel.updateCliente(id, { nit_documento, nombre_completo, correo_electronico, telefono });
+        const { nit_documento, nombre_completo } = req.body;
+        if (!nombre_completo || !nombre_completo.trim()) {
+            return res.status(400).json({ message: 'El nombre es obligatorio' });
+        }
+        await clienteModel.updateCliente(id, { nit_documento, nombre_completo });
         res.json({ message: 'Cliente actualizado' });
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: 'El NIT o documento ya está registrado' });
+        }
         res.status(500).json({ message: 'Error al actualizar cliente' });
     }
 };
