@@ -90,7 +90,11 @@ const cancelPedido = async (id_pedido) => {
         `, [id_pedido]);
 
         if (pedidoRows.length === 0) throw new Error("Pedido no encontrado.");
-        if (['Cancelado', 'Servido'].includes(pedidoRows[0].nombre_estado)) {
+        if (pedidoRows[0].nombre_estado === 'Cancelado') {
+            await connection.commit();
+            return true;
+        }
+        if (['Servido', 'Cobrado'].includes(pedidoRows[0].nombre_estado)) {
             throw new Error(`No se puede cancelar un pedido con estado: ${pedidoRows[0].nombre_estado}`);
         }
 

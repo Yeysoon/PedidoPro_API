@@ -13,8 +13,8 @@ const getComandasPendientes = async () => {
         LEFT JOIN Productos prod ON dp.id_producto = prod.id_producto
         LEFT JOIN Usuarios u ON p.id_usuario_mesero = u.id_usuario
         LEFT JOIN Clientes c ON p.id_cliente = c.id_cliente
-        WHERE ep.id_estado IN (1, 2, 3, 4)
-           OR ep.nombre_estado IN ('Pendiente', 'En Preparación', 'Listo', 'Servido')
+        WHERE ep.nombre_estado NOT IN ('Cancelado', 'Cobrado', 'Anulado')
+          AND ep.id_estado NOT IN (5, 6)
         ORDER BY p.fecha_hora_creacion ASC
     `;
     const [rows] = await db.execute(query);
