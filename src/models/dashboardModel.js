@@ -135,7 +135,10 @@ const getAdminStats = async (period = 'monthly') => {
     };
 };
 
-const getMeseroStats = async (id_usuario_mesero) => {
+const getMeseroStats = async (id_usuario_mesero, period = 'monthly') => {
+    const periodWhereP = getPeriodCondition(period, 'p.fecha_hora_creacion');
+    const periodWherePed = getPeriodCondition(period, 'ped.fecha_hora_creacion');
+
     const [mesasResumen] = await db.execute(`SELECT estado, COUNT(*) as cantidad FROM Mesas GROUP BY estado`);
     let mis_pedidos_activos = 0;
     let mis_comandas_recientes = [];
@@ -145,7 +148,7 @@ const getMeseroStats = async (id_usuario_mesero) => {
             SELECT COUNT(*) as activos 
             FROM Pedidos p 
             JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado 
-            WHERE p.id_usuario_mesero = ? AND ep.nombre_estado NOT IN ('Cancelado', 'Servido')
+            WHERE p.id_usuario_mesero = ? AND ep.nombre_estado NOT IN ('Cancelado') AND ${periodWhereP}
         `, [id_usuario_mesero]);
         mis_pedidos_activos = misPedidosRows[0]?.activos || 0;
 
@@ -161,7 +164,7 @@ const getMeseroStats = async (id_usuario_mesero) => {
             JOIN Mesas m ON p.id_mesa = m.id_mesa
             LEFT JOIN Zonas_Restaurante z ON m.id_zona = z.id_zona
             JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado
-            WHERE p.id_usuario_mesero = ?
+            WHERE p.id_usuario_mesero = ? AND ${periodWhereP}
             ORDER BY p.id_pedido DESC
             LIMIT 15
         `, [id_usuario_mesero]);
@@ -175,11 +178,30 @@ const getMeseroStats = async (id_usuario_mesero) => {
         ORDER BY m.numero_mesa ASC
     `);
 
+    const [topDishesRows] = await db.execute(`
+        SELECT 
+            p.id_producto,
+            p.nombre_producto,
+            c.nombre_categoria,
+            CAST(SUM(dp.cantidad) AS SIGNED) as total_vendido,
+            CAST(SUM(dp.cantidad * dp.precio_unitario_historico) AS DECIMAL(10,2)) as total_ingresos
+        FROM Detalle_Pedido dp
+        JOIN Productos p ON dp.id_producto = p.id_producto
+        JOIN Categorias_Menu c ON p.id_categoria = c.id_categoria
+        JOIN Pedidos ped ON dp.id_pedido = ped.id_pedido
+        JOIN Estados_Pedido ep ON ped.id_estado = ep.id_estado
+        WHERE ep.nombre_estado != 'Cancelado' AND ${periodWherePed}
+        GROUP BY p.id_producto, p.nombre_producto, c.nombre_categoria
+        ORDER BY total_vendido DESC
+        LIMIT 5
+    `);
+
     return { 
         resumen_mesas: mesasResumen, 
         mis_pedidos_activos, 
         mesas: mesasDetalle,
-        mis_comandas: mis_comandas_recientes 
+        mis_comandas: mis_comandas_recientes,
+        platillos_top: topDishesRows
     };
 };
 

@@ -14,7 +14,8 @@ const getAdminDashboard = async (req, res) => {
 const getMeseroDashboard = async (req, res) => {
     try {
         const id_usuario = req.user.id;
-        const stats = await dashboardModel.getMeseroStats(id_usuario);
+        const period = req.query.period || 'monthly';
+        const stats = await dashboardModel.getMeseroStats(id_usuario, period);
         res.json({ success: true, data: stats });
     } catch (error) {
         console.error('Error al obtener dashboard mesero:', error);
