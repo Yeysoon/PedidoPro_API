@@ -15,6 +15,7 @@ const getComandasPendientes = async () => {
         LEFT JOIN Clientes c ON p.id_cliente = c.id_cliente
         WHERE ep.nombre_estado NOT IN ('Cancelado', 'Cobrado', 'Anulado')
           AND ep.id_estado NOT IN (5, 6)
+          AND p.id_pedido NOT IN (SELECT id_pedido FROM Facturas_Pagos)
         ORDER BY p.fecha_hora_creacion ASC
     `;
     const [rows] = await db.execute(query);

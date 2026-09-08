@@ -82,12 +82,12 @@ const facturarPedido = async (facturaData) => {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [id_pedido, id_cliente || null, id_usuario_cajero, id_metodo_pago, subtotal, impuestos, total_pagado, propina || 0]);
 
-        // 3. Obtener id_estado de 'Servido'
-        const [estadoRows] = await connection.execute(`SELECT id_estado FROM Estados_Pedido WHERE nombre_estado = 'Servido'`);
-        const id_estado_servido = estadoRows[0].id_estado;
+        // 3. Obtener id_estado de 'Cobrado'
+        const [estadoRows] = await connection.execute(`SELECT id_estado FROM Estados_Pedido WHERE nombre_estado = 'Cobrado'`);
+        const id_estado_cobrado = estadoRows.length ? estadoRows[0].id_estado : 6;
 
-        // 4. Actualizar estado del pedido a 'Servido'
-        await connection.execute(`UPDATE Pedidos SET id_estado = ? WHERE id_pedido = ?`, [id_estado_servido, id_pedido]);
+        // 4. Actualizar estado del pedido a 'Cobrado'
+        await connection.execute(`UPDATE Pedidos SET id_estado = ? WHERE id_pedido = ?`, [id_estado_cobrado, id_pedido]);
 
         // 5. Liberar mesa
         const [pedidoRows] = await connection.execute(`SELECT id_mesa FROM Pedidos WHERE id_pedido = ?`, [id_pedido]);
