@@ -229,6 +229,7 @@ const getCocinaStats = async (period = 'monthly') => {
 
 const getCajaStats = async (period = 'monthly') => {
     const periodWhere = getPeriodCondition(period, 'fecha_hora_pago');
+    const periodWherePed = getPeriodCondition(period, 'ped.fecha_hora_creacion');
     const [pedidosListos] = await db.execute(`SELECT COUNT(*) as listos FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE ep.nombre_estado = 'Listo'`);
     const [cajaHoy] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS total_ingresado, COUNT(*) as facturas_emitidas FROM Facturas_Pagos WHERE DATE(fecha_hora_pago) = CURDATE()`);
     const [cajaPeriodo] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS total_periodo, COUNT(*) as facturas_periodo FROM Facturas_Pagos WHERE ${periodWhere}`);
@@ -241,13 +242,32 @@ const getCajaStats = async (period = 'monthly') => {
         ORDER BY total DESC
     `);
 
+    const [topDishesRows] = await db.execute(`
+        SELECT 
+            p.id_producto,
+            p.nombre_producto,
+            c.nombre_categoria,
+            CAST(SUM(dp.cantidad) AS SIGNED) as total_vendido,
+            CAST(SUM(dp.cantidad * dp.precio_unitario_historico) AS DECIMAL(10,2)) as total_ingresos
+        FROM Detalle_Pedido dp
+        JOIN Productos p ON dp.id_producto = p.id_producto
+        JOIN Categorias_Menu c ON p.id_categoria = c.id_categoria
+        JOIN Pedidos ped ON dp.id_pedido = ped.id_pedido
+        JOIN Estados_Pedido ep ON ped.id_estado = ep.id_estado
+        WHERE ep.nombre_estado != 'Cancelado' AND ${periodWherePed}
+        GROUP BY p.id_producto, p.nombre_producto, c.nombre_categoria
+        ORDER BY total_vendido DESC
+        LIMIT 5
+    `);
+
     return { 
         pedidos_listos: pedidosListos[0]?.listos || 0, 
         ingresos_hoy: Number(cajaHoy[0]?.total_ingresado || 0), 
         facturas_emitidas_hoy: cajaHoy[0]?.facturas_emitidas || 0,
         ingresos_periodo: Number(cajaPeriodo[0]?.total_periodo || 0),
         facturas_periodo: cajaPeriodo[0]?.facturas_periodo || 0,
-        metodos_pago: metodosResumen
+        metodos_pago: metodosResumen,
+        platillos_top: topDishesRows
     };
 };
 
