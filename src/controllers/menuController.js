@@ -1,4 +1,5 @@
 const menuModel = require('../models/menuModel');
+const inventarioModel = require('../models/inventarioModel');
 
 const getMenu = async (req, res) => {
     try {
@@ -12,14 +13,24 @@ const getMenu = async (req, res) => {
 
 const createProducto = async (req, res) => {
     try {
-        const { id_categoria, nombre_producto, descripcion, precio, disponible } = req.body;
+        const { id_categoria, nombre_producto, descripcion, precio, disponible, ingredientes } = req.body;
 
         if (!id_categoria || !nombre_producto || !precio) {
             return res.status(400).json({ message: 'Categoría, nombre y precio son obligatorios' });
         }
 
         const result = await menuModel.createProducto({ id_categoria, nombre_producto, descripcion, precio, disponible });
-        res.status(201).json({ message: 'Producto creado exitosamente', id_producto: result.insertId });
+        const id_producto = result.insertId;
+
+        let items = ingredientes;
+        if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch(e) {}
+        }
+        if (Array.isArray(items)) {
+            await inventarioModel.saveRecetaProducto(id_producto, items);
+        }
+
+        res.status(201).json({ message: 'Producto creado exitosamente', id_producto });
     } catch (error) {
         console.error('Error al crear producto:', error);
         res.status(500).json({ message: 'Error del servidor al crear producto' });
@@ -29,10 +40,20 @@ const createProducto = async (req, res) => {
 const updateProducto = async (req, res) => {
     try {
         const { id } = req.params;
-        const { id_categoria, nombre_producto, descripcion, precio, disponible } = req.body;
+        const { id_categoria, nombre_producto, descripcion, precio, disponible, ingredientes } = req.body;
         await menuModel.updateProducto(id, { id_categoria, nombre_producto, descripcion, precio, disponible });
+
+        let items = ingredientes;
+        if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch(e) {}
+        }
+        if (Array.isArray(items)) {
+            await inventarioModel.saveRecetaProducto(id, items);
+        }
+
         res.json({ message: 'Producto actualizado exitosamente' });
     } catch (error) {
+        console.error('Error al actualizar producto:', error);
         res.status(500).json({ message: 'Error al actualizar producto' });
     }
 };

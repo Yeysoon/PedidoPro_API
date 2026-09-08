@@ -28,20 +28,6 @@ const createPedido = async (id_mesa, id_usuario_mesero, notas_generales, detalle
                 `INSERT INTO Detalle_Pedido (id_pedido, id_producto, cantidad, precio_unitario_historico, notas_especiales) VALUES (?, ?, ?, ?, ?)`,
                 [id_pedido, detalle.id_producto, detalle.cantidad, precio_unitario_historico, detalle.notas_especiales || '']
             );
-
-            // Deducción de Inventario (Recetas)
-            const [recetaRows] = await connection.execute(
-                `SELECT id_ingrediente, cantidad_necesaria FROM Recetas_Producto WHERE id_producto = ?`,
-                [detalle.id_producto]
-            );
-
-            for (const receta of recetaRows) {
-                const cantidadADescontar = receta.cantidad_necesaria * detalle.cantidad;
-                await connection.execute(
-                    `UPDATE Ingredientes SET stock_actual = stock_actual - ? WHERE id_ingrediente = ?`,
-                    [cantidadADescontar, receta.id_ingrediente]
-                );
-            }
         }
 
         // Actualizar estado de la mesa a 'Ocupada'
@@ -59,14 +45,15 @@ const createPedido = async (id_mesa, id_usuario_mesero, notas_generales, detalle
 
 const getCuentaMesa = async (id_mesa) => {
     const query = `
-        SELECT p.id_pedido, p.fecha_hora_creacion, ep.nombre_estado, 
+        SELECT p.id_pedido, p.fecha_hora_creacion, p.notas_generales, ep.nombre_estado,
                dp.id_detalle, prod.nombre_producto, dp.cantidad, dp.precio_unitario_historico,
-               (dp.cantidad * dp.precio_unitario_historico) as subtotal
+               (dp.cantidad * dp.precio_unitario_historico) AS subtotal_linea
         FROM Pedidos p
         JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado
         JOIN Detalle_Pedido dp ON p.id_pedido = dp.id_pedido
         JOIN Productos prod ON dp.id_producto = prod.id_producto
-        WHERE p.id_mesa = ? AND ep.nombre_estado NOT IN ('Servido', 'Cancelado')
+        WHERE p.id_mesa = ? AND ep.nombre_estado NOT IN ('Cobrado', 'Cancelado')
+        ORDER BY p.fecha_hora_creacion ASC
     `;
     const [rows] = await db.execute(query, [id_mesa]);
     return rows;
@@ -77,21 +64,18 @@ const cancelPedido = async (id_pedido) => {
     try {
         await connection.beginTransaction();
 
-        // Obtener estado 'Cancelado'
         const [estadoRows] = await connection.execute(`SELECT id_estado FROM Estados_Pedido WHERE nombre_estado = 'Cancelado'`);
+        if (estadoRows.length === 0) throw new Error("Estado 'Cancelado' no encontrado.");
         const id_estado_cancelado = estadoRows[0].id_estado;
 
-        // Verificar si el pedido no está ya cancelado o servido
-        const [pedidoRows] = await connection.execute(`
-            SELECT p.id_mesa, ep.nombre_estado 
-            FROM Pedidos p 
-            JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado 
-            WHERE p.id_pedido = ?
-        `, [id_pedido]);
-
+        // Validar estado actual del pedido
+        const [pedidoRows] = await connection.execute(
+            `SELECT p.id_mesa, p.id_estado, ep.nombre_estado FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE p.id_pedido = ?`,
+            [id_pedido]
+        );
         if (pedidoRows.length === 0) throw new Error("Pedido no encontrado.");
         if (pedidoRows[0].nombre_estado === 'Cancelado') {
-            await connection.commit();
+            await connection.rollback();
             return true;
         }
         if (['Servido', 'Cobrado'].includes(pedidoRows[0].nombre_estado)) {
@@ -99,30 +83,32 @@ const cancelPedido = async (id_pedido) => {
         }
 
         const id_mesa = pedidoRows[0].id_mesa;
+        const id_estado_actual = Number(pedidoRows[0].id_estado);
 
         // Cambiar estado a Cancelado
         await connection.execute(`UPDATE Pedidos SET id_estado = ? WHERE id_pedido = ?`, [id_estado_cancelado, id_pedido]);
 
-        // Devolver ingredientes al inventario
-        const [detalleRows] = await connection.execute(`SELECT id_producto, cantidad FROM Detalle_Pedido WHERE id_pedido = ?`, [id_pedido]);
-        
-        for (const detalle of detalleRows) {
-            const [recetaRows] = await connection.execute(
-                `SELECT id_ingrediente, cantidad_necesaria FROM Recetas_Producto WHERE id_producto = ?`,
-                [detalle.id_producto]
-            );
-
-            for (const receta of recetaRows) {
-                const cantidadADevolver = receta.cantidad_necesaria * detalle.cantidad;
-                await connection.execute(
-                    `UPDATE Ingredientes SET stock_actual = stock_actual + ? WHERE id_ingrediente = ?`,
-                    [cantidadADevolver, receta.id_ingrediente]
+        // Devolver ingredientes al inventario SOLO si ya se habían rebajado (estado >= 2)
+        if (id_estado_actual >= 2) {
+            const [detalleRows] = await connection.execute(`SELECT id_producto, cantidad FROM Detalle_Pedido WHERE id_pedido = ?`, [id_pedido]);
+            
+            for (const detalle of detalleRows) {
+                const [recetaRows] = await connection.execute(
+                    `SELECT id_ingrediente, cantidad_necesaria FROM Recetas_Producto WHERE id_producto = ?`,
+                    [detalle.id_producto]
                 );
+
+                for (const receta of recetaRows) {
+                    const cantidadADevolver = receta.cantidad_necesaria * detalle.cantidad;
+                    await connection.execute(
+                        `UPDATE Ingredientes SET stock_actual = stock_actual + ? WHERE id_ingrediente = ?`,
+                        [cantidadADevolver, receta.id_ingrediente]
+                    );
+                }
             }
         }
 
-        // Liberar mesa (asumiendo que era el único pedido activo, para simplificar)
-        // En la vida real, se revisaría si no hay otros pedidos activos en la misma mesa.
+        // Liberar mesa
         await connection.execute(`UPDATE Mesas SET estado = 'Libre' WHERE id_mesa = ?`, [id_mesa]);
 
         await connection.commit();
@@ -153,35 +139,16 @@ const updatePedido = async (id_pedido, id_mesa, notas_generales, detalles, id_cl
 
         const id_mesa_anterior = pedidoRows[0].id_mesa;
 
-        // 1. Revertir inventario de los detalles anteriores
-        const [oldDetalleRows] = await connection.execute(
-            `SELECT id_producto, cantidad FROM Detalle_Pedido WHERE id_pedido = ?`,
-            [id_pedido]
-        );
-        for (const oldDetalle of oldDetalleRows) {
-            const [recetaRows] = await connection.execute(
-                `SELECT id_ingrediente, cantidad_necesaria FROM Recetas_Producto WHERE id_producto = ?`,
-                [oldDetalle.id_producto]
-            );
-            for (const receta of recetaRows) {
-                const cantidadADevolver = receta.cantidad_necesaria * oldDetalle.cantidad;
-                await connection.execute(
-                    `UPDATE Ingredientes SET stock_actual = stock_actual + ? WHERE id_ingrediente = ?`,
-                    [cantidadADevolver, receta.id_ingrediente]
-                );
-            }
-        }
-
-        // 2. Eliminar detalles anteriores
+        // 1. Eliminar detalles anteriores
         await connection.execute(`DELETE FROM Detalle_Pedido WHERE id_pedido = ?`, [id_pedido]);
 
-        // 3. Actualizar datos principales del pedido
+        // 2. Actualizar datos principales del pedido
         await connection.execute(
             `UPDATE Pedidos SET id_mesa = ?, notas_generales = ?, id_cliente = ? WHERE id_pedido = ?`,
             [id_mesa, notas_generales || '', id_cliente || null, id_pedido]
         );
 
-        // 4. Insertar nuevos detalles y descontar nuevo inventario
+        // 3. Insertar nuevos detalles
         for (const detalle of detalles) {
             const [productoRows] = await connection.execute(`SELECT precio FROM Productos WHERE id_producto = ?`, [detalle.id_producto]);
             if (productoRows.length === 0) throw new Error(`Producto ${detalle.id_producto} no encontrado.`);
@@ -191,18 +158,6 @@ const updatePedido = async (id_pedido, id_mesa, notas_generales, detalles, id_cl
                 `INSERT INTO Detalle_Pedido (id_pedido, id_producto, cantidad, precio_unitario_historico, notas_especiales) VALUES (?, ?, ?, ?, ?)`,
                 [id_pedido, detalle.id_producto, detalle.cantidad, precio_unitario_historico, detalle.notas_especiales || '']
             );
-
-            const [recetaRows] = await connection.execute(
-                `SELECT id_ingrediente, cantidad_necesaria FROM Recetas_Producto WHERE id_producto = ?`,
-                [detalle.id_producto]
-            );
-            for (const receta of recetaRows) {
-                const cantidadADescontar = receta.cantidad_necesaria * detalle.cantidad;
-                await connection.execute(
-                    `UPDATE Ingredientes SET stock_actual = stock_actual - ? WHERE id_ingrediente = ?`,
-                    [cantidadADescontar, receta.id_ingrediente]
-                );
-            }
         }
 
         // 5. Si cambió de mesa, actualizar estados de mesa

@@ -35,7 +35,7 @@ const getRecetaProducto = async (id_producto) => {
         JOIN Ingredientes i ON r.id_ingrediente = i.id_ingrediente
         WHERE r.id_producto = ?
     `;
-    const [rows] = await db.execute(query, [id_producto]);
+    const [rows] = await db.execute(query, [Number(id_producto)]);
     return rows;
 };
 
@@ -44,21 +44,27 @@ const saveRecetaProducto = async (id_producto, ingredientes) => {
     try {
         await connection.beginTransaction();
 
+        const prodId = Number(id_producto);
         // Borrar receta anterior
-        await connection.execute(`DELETE FROM Recetas_Producto WHERE id_producto = ?`, [id_producto]);
+        await connection.execute(`DELETE FROM Recetas_Producto WHERE id_producto = ?`, [prodId]);
 
         // Insertar nuevos ingredientes de la receta
-        for (const item of ingredientes) {
-            await connection.execute(
-                `INSERT INTO Recetas_Producto (id_producto, id_ingrediente, cantidad_necesaria) VALUES (?, ?, ?)`,
-                [id_producto, item.id_ingrediente, item.cantidad_necesaria]
-            );
+        if (Array.isArray(ingredientes)) {
+            for (const item of ingredientes) {
+                if (item && item.id_ingrediente) {
+                    await connection.execute(
+                        `INSERT INTO Recetas_Producto (id_producto, id_ingrediente, cantidad_necesaria) VALUES (?, ?, ?)`,
+                        [prodId, Number(item.id_ingrediente), Number(item.cantidad_necesaria || 1)]
+                    );
+                }
+            }
         }
 
         await connection.commit();
         return true;
     } catch (error) {
         await connection.rollback();
+        console.error('Error al guardar receta en base de datos:', error);
         throw error;
     } finally {
         connection.release();
