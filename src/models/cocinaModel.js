@@ -11,7 +11,7 @@ const getComandasPendientes = async () => {
         JOIN Detalle_Pedido dp ON p.id_pedido = dp.id_pedido
         JOIN Productos prod ON dp.id_producto = prod.id_producto
         LEFT JOIN Usuarios u ON p.id_usuario_mesero = u.id_usuario
-        WHERE ep.nombre_estado IN ('Pendiente', 'En Preparación', 'Listo')
+        WHERE ep.nombre_estado IN ('Pendiente', 'En Preparación', 'Listo', 'Servido')
         ORDER BY p.fecha_hora_creacion ASC
     `;
     const [rows] = await db.execute(query);
