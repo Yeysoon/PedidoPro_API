@@ -1,6 +1,6 @@
 const db = require('../config/db');
 
-const createPedido = async (id_mesa, id_usuario_mesero, notas_generales, detalles) => {
+const createPedido = async (id_mesa, id_usuario_mesero, notas_generales, detalles, id_cliente = null) => {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -10,10 +10,10 @@ const createPedido = async (id_mesa, id_usuario_mesero, notas_generales, detalle
         if (estadoRows.length === 0) throw new Error("Estado 'Pendiente' no encontrado en la base de datos.");
         const id_estado = estadoRows[0].id_estado;
 
-        // Insertar en Pedidos
+        // Insertar en Pedidos con id_cliente
         const [pedidoResult] = await connection.execute(
-            `INSERT INTO Pedidos (id_mesa, id_usuario_mesero, id_estado, notas_generales) VALUES (?, ?, ?, ?)`,
-            [id_mesa, id_usuario_mesero, id_estado, notas_generales || '']
+            `INSERT INTO Pedidos (id_mesa, id_usuario_mesero, id_estado, notas_generales, id_cliente) VALUES (?, ?, ?, ?, ?)`,
+            [id_mesa, id_usuario_mesero, id_estado, notas_generales || '', id_cliente || null]
         );
         const id_pedido = pedidoResult.insertId;
 

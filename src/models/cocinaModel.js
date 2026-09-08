@@ -4,13 +4,15 @@ const getComandasPendientes = async () => {
     const query = `
         SELECT p.id_pedido, p.fecha_hora_creacion, p.notas_generales, m.numero_mesa, ep.nombre_estado, ep.id_estado,
                dp.id_detalle, prod.nombre_producto, dp.cantidad, dp.notas_especiales,
-               u.nombre AS mesero_nombre
+               u.nombre AS mesero_nombre,
+               c.nombre_completo AS cliente_nombre, c.nit_documento AS cliente_nit
         FROM Pedidos p
         JOIN Mesas m ON p.id_mesa = m.id_mesa
         JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado
         LEFT JOIN Detalle_Pedido dp ON p.id_pedido = dp.id_pedido
         LEFT JOIN Productos prod ON dp.id_producto = prod.id_producto
         LEFT JOIN Usuarios u ON p.id_usuario_mesero = u.id_usuario
+        LEFT JOIN Clientes c ON p.id_cliente = c.id_cliente
         WHERE ep.id_estado IN (1, 2, 3, 4)
            OR ep.nombre_estado IN ('Pendiente', 'En Preparación', 'Listo', 'Servido')
         ORDER BY p.fecha_hora_creacion ASC
@@ -32,6 +34,8 @@ const getComandasPendientes = async () => {
                 estado: row.nombre_estado,
                 id_estado: Number(row.id_estado),
                 mesero: row.mesero_nombre,
+                cliente_nombre: row.cliente_nombre,
+                cliente_nit: row.cliente_nit,
                 detalles: []
             };
             comandasMap.set(row.id_pedido, nuevaComanda);

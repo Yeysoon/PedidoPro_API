@@ -3,13 +3,15 @@ const db = require('../config/db');
 const getPedidosListos = async () => {
     const query = `
         SELECT p.id_pedido, p.fecha_hora_creacion, p.notas_generales, m.numero_mesa, m.id_mesa, ep.nombre_estado, ep.id_estado,
-               u.nombre AS mesero_nombre,
+               u.nombre AS mesero_nombre, p.id_cliente,
+               c.nombre_completo AS cliente_nombre, c.nit_documento AS cliente_nit,
                dp.id_detalle, dp.id_producto, prod.nombre_producto, dp.cantidad, dp.precio_unitario_historico, dp.notas_especiales,
                (dp.cantidad * dp.precio_unitario_historico) AS subtotal_item
         FROM Pedidos p
         JOIN Mesas m ON p.id_mesa = m.id_mesa
         JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado
         LEFT JOIN Usuarios u ON p.id_usuario_mesero = u.id_usuario
+        LEFT JOIN Clientes c ON p.id_cliente = c.id_cliente
         LEFT JOIN Detalle_Pedido dp ON p.id_pedido = dp.id_pedido
         LEFT JOIN Productos prod ON dp.id_producto = prod.id_producto
         WHERE (ep.nombre_estado IN ('Servido', 'Listo') OR ep.id_estado IN (3, 4))
@@ -31,6 +33,9 @@ const getPedidosListos = async () => {
                 estado: row.nombre_estado,
                 id_estado: Number(row.id_estado),
                 mesero: row.mesero_nombre,
+                id_cliente: row.id_cliente,
+                cliente_nombre: row.cliente_nombre,
+                cliente_nit: row.cliente_nit,
                 detalles: [],
                 total_estimado: 0
             });

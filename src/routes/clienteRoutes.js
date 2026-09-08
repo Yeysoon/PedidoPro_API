@@ -4,8 +4,8 @@ const clienteController = require('../controllers/clienteController');
 const { verifyToken, checkRole } = require('../middlewares/authMiddleware');
 
 router.use(verifyToken);
-// Cajeros y Administradores gestionan clientes
-router.use(checkRole(['Cajero', 'Administrador']));
+// Cajeros, Administradores y Meseros gestionan clientes
+router.use(checkRole(['Cajero', 'Administrador', 'Mesero']));
 
 const { check } = require('express-validator');
 const { validateFields } = require('../middlewares/validatorMiddleware');
