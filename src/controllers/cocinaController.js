@@ -13,7 +13,12 @@ const getComandas = async (req, res) => {
 const updateEstado = async (req, res) => {
     try {
         const { id } = req.params;
-        const { estado } = req.body; // Ej: 'Listo', 'En Preparación'
+        let { estado, id_estado } = req.body;
+
+        if (id_estado && !estado) {
+            const map = { 1: 'Pendiente', 2: 'En Preparación', 3: 'Listo' };
+            estado = map[id_estado];
+        }
 
         const validEstados = ['Pendiente', 'En Preparación', 'Listo'];
         if (!validEstados.includes(estado)) {
