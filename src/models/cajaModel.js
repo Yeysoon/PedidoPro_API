@@ -2,17 +2,56 @@ const db = require('../config/db');
 
 const getPedidosListos = async () => {
     const query = `
-        SELECT p.id_pedido, p.fecha_hora_creacion, m.numero_mesa, ep.nombre_estado,
-               (SELECT SUM(dp.cantidad * dp.precio_unitario_historico) 
-                FROM Detalle_Pedido dp WHERE dp.id_pedido = p.id_pedido) as total_estimado
+        SELECT p.id_pedido, p.fecha_hora_creacion, p.notas_generales, m.numero_mesa, m.id_mesa, ep.nombre_estado, ep.id_estado,
+               u.nombre AS mesero_nombre,
+               dp.id_detalle, dp.id_producto, prod.nombre_producto, dp.cantidad, dp.precio_unitario_historico, dp.notas_especiales,
+               (dp.cantidad * dp.precio_unitario_historico) AS subtotal_item
         FROM Pedidos p
         JOIN Mesas m ON p.id_mesa = m.id_mesa
         JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado
-        WHERE ep.nombre_estado = 'Listo'
+        LEFT JOIN Usuarios u ON p.id_usuario_mesero = u.id_usuario
+        LEFT JOIN Detalle_Pedido dp ON p.id_pedido = dp.id_pedido
+        LEFT JOIN Productos prod ON dp.id_producto = prod.id_producto
+        WHERE (ep.nombre_estado IN ('Servido', 'Listo') OR ep.id_estado IN (3, 4))
+          AND p.id_pedido NOT IN (SELECT id_pedido FROM Facturas_Pagos)
         ORDER BY p.fecha_hora_creacion ASC
     `;
     const [rows] = await db.execute(query);
-    return rows;
+    
+    const pedidosMap = new Map();
+    rows.forEach(row => {
+        if (!pedidosMap.has(row.id_pedido)) {
+            pedidosMap.set(row.id_pedido, {
+                id_pedido: row.id_pedido,
+                fecha_hora_creacion: row.fecha_hora_creacion,
+                notas_generales: row.notas_generales,
+                numero_mesa: row.numero_mesa,
+                id_mesa: row.id_mesa,
+                nombre_estado: row.nombre_estado,
+                estado: row.nombre_estado,
+                id_estado: Number(row.id_estado),
+                mesero: row.mesero_nombre,
+                detalles: [],
+                total_estimado: 0
+            });
+        }
+        if (row.id_detalle && row.nombre_producto) {
+            const pedido = pedidosMap.get(row.id_pedido);
+            const subtotal = Number(row.subtotal_item || (row.cantidad * row.precio_unitario_historico) || 0);
+            pedido.detalles.push({
+                id_detalle: row.id_detalle,
+                id_producto: row.id_producto,
+                nombre_producto: row.nombre_producto,
+                cantidad: Number(row.cantidad) || 1,
+                precio_unitario_historico: Number(row.precio_unitario_historico) || 0,
+                subtotal: subtotal,
+                notas_especiales: row.notas_especiales
+            });
+            pedido.total_estimado += subtotal;
+        }
+    });
+
+    return Array.from(pedidosMap.values());
 };
 
 const facturarPedido = async (facturaData) => {
@@ -74,12 +113,12 @@ const anularFactura = async (id_factura) => {
         // Eliminar la factura
         await connection.execute(`DELETE FROM Facturas_Pagos WHERE id_factura = ?`, [id_factura]);
 
-        // Obtener estado 'Listo'
-        const [estadoRows] = await connection.execute(`SELECT id_estado FROM Estados_Pedido WHERE nombre_estado = 'Listo'`);
-        const id_estado_listo = estadoRows[0].id_estado;
+        // Obtener estado 'Servido'
+        const [estadoRows] = await connection.execute(`SELECT id_estado FROM Estados_Pedido WHERE nombre_estado = 'Servido'`);
+        const id_estado_servido = estadoRows.length ? estadoRows[0].id_estado : 4;
 
-        // Revertir el estado del pedido a 'Listo'
-        await connection.execute(`UPDATE Pedidos SET id_estado = ? WHERE id_pedido = ?`, [id_estado_listo, id_pedido]);
+        // Revertir el estado del pedido a 'Servido'
+        await connection.execute(`UPDATE Pedidos SET id_estado = ? WHERE id_pedido = ?`, [id_estado_servido, id_pedido]);
 
         // Obtener id_mesa del pedido y revertirla a 'Ocupada'
         const [pedidoRows] = await connection.execute(`SELECT id_mesa FROM Pedidos WHERE id_pedido = ?`, [id_pedido]);
