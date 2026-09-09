@@ -210,7 +210,6 @@ const getFacturas = async (fechaInicio, fechaFin, period = 'all', search = '', p
         LIMIT ? OFFSET ?
     `;
     const dataParams = [...params, limit.toString(), offset.toString()];
-    const [rows] = await db.execute(dataQuery, dataParams);
 
     const countQuery = `
         SELECT COUNT(*) as total 
@@ -223,7 +222,11 @@ const getFacturas = async (fechaInicio, fechaFin, period = 'all', search = '', p
         LEFT JOIN Clientes c ON f.id_cliente = c.id_cliente 
         WHERE ${whereClause}
     `;
-    const [countRows] = await db.execute(countQuery, params);
+
+    const [[rows], [countRows]] = await Promise.all([
+        db.execute(dataQuery, dataParams),
+        db.execute(countQuery, params)
+    ]);
 
     return { data: rows, total_registros: countRows[0].total };
 };

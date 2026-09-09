@@ -17,17 +17,23 @@ const createPedido = async (id_mesa, id_usuario_mesero, notas_generales, detalle
         );
         const id_pedido = pedidoResult.insertId;
 
-        // Insertar en Detalle_Pedido
-        for (const detalle of detalles) {
-            // Obtener precio actual del producto
-            const [productoRows] = await connection.execute(`SELECT precio FROM Productos WHERE id_producto = ?`, [detalle.id_producto]);
-            if (productoRows.length === 0) throw new Error(`Producto ${detalle.id_producto} no encontrado.`);
-            const precio_unitario_historico = productoRows[0].precio;
-
-            await connection.execute(
-                `INSERT INTO Detalle_Pedido (id_pedido, id_producto, cantidad, precio_unitario_historico, notas_especiales) VALUES (?, ?, ?, ?, ?)`,
-                [id_pedido, detalle.id_producto, detalle.cantidad, precio_unitario_historico, detalle.notas_especiales || '']
+        // Insertar en Detalle_Pedido de manera optimizada
+        if (detalles && detalles.length > 0) {
+            const productIds = detalles.map(d => Number(d.id_producto)).filter(Boolean);
+            const placeholders = productIds.map(() => '?').join(',');
+            const [productoRows] = await connection.execute(
+                `SELECT id_producto, precio FROM Productos WHERE id_producto IN (${placeholders})`,
+                productIds
             );
+            const priceMap = new Map(productoRows.map(p => [Number(p.id_producto), Number(p.precio)]));
+
+            for (const detalle of detalles) {
+                const precio = priceMap.get(Number(detalle.id_producto)) || 0;
+                await connection.execute(
+                    `INSERT INTO Detalle_Pedido (id_pedido, id_producto, cantidad, precio_unitario_historico, notas_especiales) VALUES (?, ?, ?, ?, ?)`,
+                    [id_pedido, detalle.id_producto, detalle.cantidad, precio, detalle.notas_especiales || '']
+                );
+            }
         }
 
         // Actualizar estado de la mesa a 'Ocupada'
@@ -148,16 +154,23 @@ const updatePedido = async (id_pedido, id_mesa, notas_generales, detalles, id_cl
             [id_mesa, notas_generales || '', id_cliente || null, id_pedido]
         );
 
-        // 3. Insertar nuevos detalles
-        for (const detalle of detalles) {
-            const [productoRows] = await connection.execute(`SELECT precio FROM Productos WHERE id_producto = ?`, [detalle.id_producto]);
-            if (productoRows.length === 0) throw new Error(`Producto ${detalle.id_producto} no encontrado.`);
-            const precio_unitario_historico = productoRows[0].precio;
-
-            await connection.execute(
-                `INSERT INTO Detalle_Pedido (id_pedido, id_producto, cantidad, precio_unitario_historico, notas_especiales) VALUES (?, ?, ?, ?, ?)`,
-                [id_pedido, detalle.id_producto, detalle.cantidad, precio_unitario_historico, detalle.notas_especiales || '']
+        // 3. Insertar nuevos detalles de manera optimizada
+        if (detalles && detalles.length > 0) {
+            const productIds = detalles.map(d => Number(d.id_producto)).filter(Boolean);
+            const placeholders = productIds.map(() => '?').join(',');
+            const [productoRows] = await connection.execute(
+                `SELECT id_producto, precio FROM Productos WHERE id_producto IN (${placeholders})`,
+                productIds
             );
+            const priceMap = new Map(productoRows.map(p => [Number(p.id_producto), Number(p.precio)]));
+
+            for (const detalle of detalles) {
+                const precio = priceMap.get(Number(detalle.id_producto)) || 0;
+                await connection.execute(
+                    `INSERT INTO Detalle_Pedido (id_pedido, id_producto, cantidad, precio_unitario_historico, notas_especiales) VALUES (?, ?, ?, ?, ?)`,
+                    [id_pedido, detalle.id_producto, detalle.cantidad, precio, detalle.notas_especiales || '']
+                );
+            }
         }
 
         // 5. Si cambió de mesa, actualizar estados de mesa
@@ -199,10 +212,13 @@ const getAllPedidos = async (estado, fechaInicio, fechaFin, page, limit) => {
 
     const dataQuery = `SELECT p.id_pedido, p.fecha_hora_creacion, p.notas_generales, ep.nombre_estado, m.numero_mesa, u.nombre AS mesero, (SELECT SUM(dp.cantidad * dp.precio_unitario_historico) FROM Detalle_Pedido dp WHERE dp.id_pedido = p.id_pedido) AS total FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado JOIN Mesas m ON p.id_mesa = m.id_mesa JOIN Usuarios u ON p.id_usuario_mesero = u.id_usuario WHERE ${whereClause} ORDER BY p.fecha_hora_creacion DESC LIMIT ? OFFSET ?`;
     const dataParams = [...params, limit.toString(), offset.toString()];
-    const [rows] = await db.execute(dataQuery, dataParams);
 
     const countQuery = `SELECT COUNT(*) as total FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE ${whereClause}`;
-    const [countRows] = await db.execute(countQuery, params);
+    
+    const [[rows], [countRows]] = await Promise.all([
+        db.execute(dataQuery, dataParams),
+        db.execute(countQuery, params)
+    ]);
 
     return { data: rows, total_registros: countRows[0].total };
 };

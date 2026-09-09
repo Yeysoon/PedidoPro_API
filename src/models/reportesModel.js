@@ -25,16 +25,19 @@ const getVentasTotales = async (fechaInicio, fechaFin, limit, offset) => {
         params.push(limit.toString(), offset.toString());
     }
 
-    const [rows] = await db.execute(query, params);
-    
-    // 2. Obtener el total de registros
+    // 2. Query para el total de registros
     const countQuery = `
         SELECT COUNT(DISTINCT DATE_FORMAT(CONVERT_TZ(fecha_hora_pago, '+00:00', '-06:00'), '%Y-%m-%d')) as total_rows
         FROM Facturas_Pagos
         ${whereClause}
     `;
     const countParams = fechaInicio && fechaFin ? [fechaInicio, fechaFin] : [];
-    const [countRows] = await db.execute(countQuery, countParams);
+
+    const [[rows], [countRows]] = await Promise.all([
+        db.execute(query, params),
+        db.execute(countQuery, countParams)
+    ]);
+
     const total_registros = countRows[0]?.total_rows || 0;
 
     return {

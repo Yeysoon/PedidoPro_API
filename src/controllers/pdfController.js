@@ -2,6 +2,16 @@ const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
 
+const logoPath = path.join(__dirname, '../assets/logo.png');
+let cachedLogoBuffer = null;
+try {
+    if (fs.existsSync(logoPath)) {
+        cachedLogoBuffer = fs.readFileSync(logoPath);
+    }
+} catch (e) {
+    cachedLogoBuffer = null;
+}
+
 const formatMoney = (val) => {
     return 'Q ' + (parseFloat(val) || 0).toFixed(2);
 };
@@ -61,13 +71,12 @@ const getFacturaPDF = async (req, res) => {
 
         let currentY = 16;
 
-        // 2. Logo si existe
-        const logoPath = path.join(__dirname, '../assets/logo.png');
-        if (fs.existsSync(logoPath)) {
+        // 2. Logo si existe (usando el buffer en memoria)
+        if (cachedLogoBuffer) {
             try {
                 const logoSize = 36;
                 const logoX = (pageWidth - logoSize) / 2;
-                doc.image(logoPath, logoX, currentY, { width: logoSize, height: logoSize });
+                doc.image(cachedLogoBuffer, logoX, currentY, { width: logoSize, height: logoSize });
                 currentY += logoSize + 4;
             } catch (err) {
                 console.warn('No se pudo renderizar imagen de logo:', err.message);

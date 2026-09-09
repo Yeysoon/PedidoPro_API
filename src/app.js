@@ -4,9 +4,12 @@ const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('../swagger.json');
 
+const compression = require('compression');
+
 const app = express();
 
 // Middlewares globales
+app.use(compression());
 app.use(cors({
     origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
