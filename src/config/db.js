@@ -1,4 +1,4 @@
-﻿const mysql = require('mysql2/promise');
+const mysql = require('mysql2/promise');
 
 const host = process.env.DB_HOST || 'caboose.proxy.rlwy.net';
 const user = process.env.DB_USER || 'ybarillas';
@@ -18,6 +18,7 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0,
     connectTimeout: 25000,
+    timezone: 'Z',
     ssl: {
         rejectUnauthorized: false
     }

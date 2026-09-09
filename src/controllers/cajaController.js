@@ -48,11 +48,11 @@ const anularFactura = async (req, res) => {
 
 const getFacturas = async (req, res) => {
     try {
-        const { fechaInicio, fechaFin, page = 1, limit = 20 } = req.query;
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
-        const result = await cajaModel.getFacturas(fechaInicio, fechaFin, pageNum, limitNum);
-        const total_paginas = Math.ceil(result.total_registros / limitNum);
+        const { fechaInicio, fechaFin, period = 'all', search = '', page = 1, limit = 50 } = req.query;
+        const pageNum = parseInt(page) || 1;
+        const limitNum = parseInt(limit) || 50;
+        const result = await cajaModel.getFacturas(fechaInicio, fechaFin, period, search, pageNum, limitNum);
+        const total_paginas = Math.ceil(result.total_registros / limitNum) || 1;
         res.json({
             data: result.data,
             meta: { total_registros: result.total_registros, total_paginas, pagina_actual: pageNum, limite_por_pagina: limitNum }

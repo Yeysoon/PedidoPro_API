@@ -141,22 +141,88 @@ const anularFactura = async (id_factura) => {
 };
 
 
-// GET historial de facturas con filtros y paginacion
-const getFacturas = async (fechaInicio, fechaFin, page, limit) => {
+// GET historial de facturas con filtros y paginación
+const getFacturas = async (fechaInicio, fechaFin, period = 'all', search = '', page = 1, limit = 50) => {
     const offset = (page - 1) * limit;
-    let whereClause = '1=1';
+    let whereConditions = ['1=1'];
     const params = [];
 
     if (fechaInicio && fechaFin) {
-        whereClause += ' AND DATE(f.fecha_hora_pago) BETWEEN ? AND ?';
-        params.push(fechaInicio, fechaFin);
+        if (fechaInicio === fechaFin) {
+            whereConditions.push("DATE(CONVERT_TZ(f.fecha_hora_pago, '+00:00', '-06:00')) = ?");
+            params.push(fechaInicio);
+        } else {
+            whereConditions.push("DATE(CONVERT_TZ(f.fecha_hora_pago, '+00:00', '-06:00')) BETWEEN ? AND ?");
+            params.push(fechaInicio, fechaFin);
+        }
+    } else if (fechaInicio) {
+        whereConditions.push("DATE(CONVERT_TZ(f.fecha_hora_pago, '+00:00', '-06:00')) = ?");
+        params.push(fechaInicio);
+    } else if (period === 'weekly') {
+        whereConditions.push("YEARWEEK(CONVERT_TZ(f.fecha_hora_pago, '+00:00', '-06:00'), 1) = YEARWEEK(CONVERT_TZ(NOW(), '+00:00', '-06:00'), 1)");
+    } else if (period === 'monthly') {
+        whereConditions.push("YEAR(CONVERT_TZ(f.fecha_hora_pago, '+00:00', '-06:00')) = YEAR(CONVERT_TZ(NOW(), '+00:00', '-06:00')) AND MONTH(CONVERT_TZ(f.fecha_hora_pago, '+00:00', '-06:00')) = MONTH(CONVERT_TZ(NOW(), '+00:00', '-06:00'))");
+    } else if (period === 'yearly') {
+        whereConditions.push("YEAR(CONVERT_TZ(f.fecha_hora_pago, '+00:00', '-06:00')) = YEAR(CONVERT_TZ(NOW(), '+00:00', '-06:00'))");
     }
 
-    const dataQuery = `SELECT f.id_factura, f.fecha_hora_pago, f.subtotal, f.impuestos, f.propina, f.total_pagado, mp.nombre_metodo AS metodo_pago, c.nombre_completo AS cliente, u.nombre AS cajero, m.numero_mesa FROM Facturas_Pagos f JOIN Metodos_Pago mp ON f.id_metodo_pago = mp.id_metodo_pago JOIN Pedidos p ON f.id_pedido = p.id_pedido JOIN Mesas m ON p.id_mesa = m.id_mesa JOIN Usuarios u ON f.id_usuario_cajero = u.id_usuario LEFT JOIN Clientes c ON f.id_cliente = c.id_cliente WHERE ${whereClause} ORDER BY f.fecha_hora_pago DESC LIMIT ? OFFSET ?`;
+    if (search && search.trim() !== '') {
+        const term = `%${search.trim()}%`;
+        whereConditions.push(`(
+            f.id_factura LIKE ? OR 
+            p.id_pedido LIKE ? OR 
+            m.numero_mesa LIKE ? OR 
+            c.nombre_completo LIKE ? OR 
+            c.nit_documento LIKE ? OR 
+            u.nombre LIKE ? OR 
+            um.nombre LIKE ? OR
+            mp.nombre_metodo LIKE ?
+        )`);
+        params.push(term, term, term, term, term, term, term, term);
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+
+    const dataQuery = `
+        SELECT 
+            f.id_factura, 
+            f.id_pedido, 
+            f.fecha_hora_pago, 
+            f.subtotal, 
+            f.impuestos, 
+            f.propina, 
+            f.total_pagado, 
+            mp.nombre_metodo AS metodo_pago, 
+            COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente, 
+            COALESCE(c.nit_documento, 'C/F') AS cliente_nit, 
+            u.nombre AS cajero, 
+            COALESCE(um.nombre, 'Mesero') AS mesero, 
+            m.numero_mesa
+        FROM Facturas_Pagos f 
+        JOIN Metodos_Pago mp ON f.id_metodo_pago = mp.id_metodo 
+        JOIN Pedidos p ON f.id_pedido = p.id_pedido 
+        JOIN Mesas m ON p.id_mesa = m.id_mesa 
+        JOIN Usuarios u ON f.id_usuario_cajero = u.id_usuario 
+        LEFT JOIN Usuarios um ON p.id_usuario_mesero = um.id_usuario
+        LEFT JOIN Clientes c ON f.id_cliente = c.id_cliente 
+        WHERE ${whereClause} 
+        ORDER BY f.fecha_hora_pago DESC 
+        LIMIT ? OFFSET ?
+    `;
     const dataParams = [...params, limit.toString(), offset.toString()];
     const [rows] = await db.execute(dataQuery, dataParams);
 
-    const countQuery = `SELECT COUNT(*) as total FROM Facturas_Pagos f WHERE ${whereClause}`;
+    const countQuery = `
+        SELECT COUNT(*) as total 
+        FROM Facturas_Pagos f 
+        JOIN Metodos_Pago mp ON f.id_metodo_pago = mp.id_metodo 
+        JOIN Pedidos p ON f.id_pedido = p.id_pedido 
+        JOIN Mesas m ON p.id_mesa = m.id_mesa 
+        JOIN Usuarios u ON f.id_usuario_cajero = u.id_usuario 
+        LEFT JOIN Usuarios um ON p.id_usuario_mesero = um.id_usuario
+        LEFT JOIN Clientes c ON f.id_cliente = c.id_cliente 
+        WHERE ${whereClause}
+    `;
     const [countRows] = await db.execute(countQuery, params);
 
     return { data: rows, total_registros: countRows[0].total };
@@ -164,13 +230,51 @@ const getFacturas = async (fechaInicio, fechaFin, page, limit) => {
 
 // GET detalle de una factura por ID
 const getFacturaById = async (id_factura) => {
-    const [facturaRows] = await db.execute(`SELECT f.id_factura, f.fecha_hora_pago, f.subtotal, f.impuestos, f.propina, f.total_pagado, mp.nombre_metodo AS metodo_pago, c.nombre_completo AS cliente, u.nombre AS cajero, m.numero_mesa, f.id_pedido FROM Facturas_Pagos f JOIN Metodos_Pago mp ON f.id_metodo_pago = mp.id_metodo_pago JOIN Pedidos p ON f.id_pedido = p.id_pedido JOIN Mesas m ON p.id_mesa = m.id_mesa JOIN Usuarios u ON f.id_usuario_cajero = u.id_usuario LEFT JOIN Clientes c ON f.id_cliente = c.id_cliente WHERE f.id_factura = ?`, [id_factura]);
+    const [facturaRows] = await db.execute(`
+        SELECT 
+            f.id_factura, 
+            f.id_pedido, 
+            f.fecha_hora_pago, 
+            f.subtotal, 
+            f.impuestos, 
+            f.propina, 
+            f.total_pagado, 
+            mp.nombre_metodo AS metodo_pago, 
+            COALESCE(c.nombre_completo, 'Consumidor Final') AS cliente, 
+            COALESCE(c.nit_documento, 'C/F') AS cliente_nit, 
+            u.nombre AS cajero, 
+            COALESCE(um.nombre, 'Mesero') AS mesero,
+            m.numero_mesa,
+            p.notas_generales
+        FROM Facturas_Pagos f 
+        JOIN Metodos_Pago mp ON f.id_metodo_pago = mp.id_metodo 
+        JOIN Pedidos p ON f.id_pedido = p.id_pedido 
+        JOIN Mesas m ON p.id_mesa = m.id_mesa 
+        JOIN Usuarios u ON f.id_usuario_cajero = u.id_usuario 
+        LEFT JOIN Usuarios um ON p.id_usuario_mesero = um.id_usuario
+        LEFT JOIN Clientes c ON f.id_cliente = c.id_cliente 
+        WHERE f.id_factura = ?
+    `, [id_factura]);
+    
     if (facturaRows.length === 0) return null;
 
-    const [detalleRows] = await db.execute(`SELECT dp.cantidad, dp.precio_unitario_historico, (dp.cantidad * dp.precio_unitario_historico) AS subtotal, prod.nombre_producto FROM Detalle_Pedido dp JOIN Productos prod ON dp.id_producto = prod.id_producto WHERE dp.id_pedido = ?`, [facturaRows[0].id_pedido]);
+    const [detalleRows] = await db.execute(`
+        SELECT 
+            dp.id_detalle,
+            dp.id_producto,
+            dp.cantidad, 
+            dp.precio_unitario_historico, 
+            (dp.cantidad * dp.precio_unitario_historico) AS subtotal, 
+            dp.notas_especiales,
+            prod.nombre_producto 
+        FROM Detalle_Pedido dp 
+        JOIN Productos prod ON dp.id_producto = prod.id_producto 
+        WHERE dp.id_pedido = ?
+    `, [facturaRows[0].id_pedido]);
 
     return { ...facturaRows[0], detalle_productos: detalleRows };
 };
+
 module.exports = {
     getPedidosListos,
     facturarPedido,
