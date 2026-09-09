@@ -1,14 +1,16 @@
 const db = require('../config/db');
 
-// Helper para filtrar por período del calendario actual
+// Helper para filtrar por período del calendario actual (GMT-6)
 const getPeriodCondition = (period, column = 'fecha_hora_pago') => {
+    const colGT = `CONVERT_TZ(${column}, '+00:00', '-06:00')`;
+    const nowGT = `CONVERT_TZ(NOW(), '+00:00', '-06:00')`;
     if (period === 'weekly') {
-        return `YEARWEEK(${column}, 1) = YEARWEEK(CURDATE(), 1)`;
+        return `YEARWEEK(${colGT}, 1) = YEARWEEK(${nowGT}, 1)`;
     } else if (period === 'yearly') {
-        return `YEAR(${column}) = YEAR(CURDATE())`;
+        return `YEAR(${colGT}) = YEAR(${nowGT})`;
     } else {
         // Mensual por defecto (mes y año actual)
-        return `YEAR(${column}) = YEAR(CURDATE()) AND MONTH(${column}) = MONTH(CURDATE())`;
+        return `YEAR(${colGT}) = YEAR(${nowGT}) AND MONTH(${colGT}) = MONTH(${nowGT})`;
     }
 };
 
@@ -19,7 +21,7 @@ const getAdminStats = async (period = 'monthly') => {
     const periodWhereP = getPeriodCondition(period, 'p.fecha_hora_creacion');
 
     // 1. Métricas generales / KPIs
-    const [ventasHoyRows] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS ventas_hoy FROM Facturas_Pagos WHERE DATE(fecha_hora_pago) = CURDATE()`);
+    const [ventasHoyRows] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS ventas_hoy FROM Facturas_Pagos WHERE DATE(CONVERT_TZ(fecha_hora_pago, '+00:00', '-06:00')) = DATE(CONVERT_TZ(NOW(), '+00:00', '-06:00'))`);
     const [ventasPeriodoRows] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS ventas_periodo, COUNT(id_factura) as facturas_periodo FROM Facturas_Pagos WHERE ${periodWhereStandalone}`);
     const [pedidosRows] = await db.execute(`SELECT COUNT(*) as pedidos_activos FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE ep.nombre_estado IN ('Pendiente', 'En Preparación', 'Listo')`);
     const [mesasOcupadasRows] = await db.execute(`SELECT COUNT(*) as mesas_ocupadas FROM Mesas WHERE estado = 'Ocupada'`);
@@ -33,12 +35,12 @@ const getAdminStats = async (period = 'monthly') => {
         timeGroupFormat = '%Y-%m';
     }
     const [chartRows] = await db.execute(`
-        SELECT DATE_FORMAT(fecha_hora_pago, '${timeGroupFormat}') as fecha,
+        SELECT DATE_FORMAT(CONVERT_TZ(fecha_hora_pago, '+00:00', '-06:00'), '${timeGroupFormat}') as fecha,
                CAST(COALESCE(SUM(total_pagado), 0) AS DECIMAL(10,2)) as total_ventas,
                COUNT(id_factura) as cantidad_facturas
         FROM Facturas_Pagos
         WHERE ${periodWhereStandalone}
-        GROUP BY DATE_FORMAT(fecha_hora_pago, '${timeGroupFormat}')
+        GROUP BY DATE_FORMAT(CONVERT_TZ(fecha_hora_pago, '+00:00', '-06:00'), '${timeGroupFormat}')
         ORDER BY fecha ASC
     `);
 
@@ -100,7 +102,7 @@ const getAdminStats = async (period = 'monthly') => {
             u.nombre as atendido_por,
             m.numero_mesa,
             COALESCE(z.nombre_zona, 'Salón') as nombre_zona,
-            DATE_FORMAT(p.fecha_hora_creacion, '%Y-%m-%d %H:%i') as fecha_hora,
+            DATE_FORMAT(CONVERT_TZ(p.fecha_hora_creacion, '+00:00', '-06:00'), '%Y-%m-%d %H:%i') as fecha_hora,
             ep.nombre_estado as estado,
             COALESCE(
                 fp.total_pagado,
@@ -157,7 +159,7 @@ const getMeseroStats = async (id_usuario_mesero, period = 'monthly') => {
                 p.id_pedido,
                 m.numero_mesa,
                 COALESCE(z.nombre_zona, 'Salón') as nombre_zona,
-                DATE_FORMAT(p.fecha_hora_creacion, '%Y-%m-%d %H:%i') as fecha_hora,
+                DATE_FORMAT(CONVERT_TZ(p.fecha_hora_creacion, '+00:00', '-06:00'), '%Y-%m-%d %H:%i') as fecha_hora,
                 ep.nombre_estado as estado,
                 COALESCE((SELECT SUM(dp.cantidad * dp.precio_unitario_historico) FROM Detalle_Pedido dp WHERE dp.id_pedido = p.id_pedido), 0) as total
             FROM Pedidos p
@@ -231,7 +233,7 @@ const getCajaStats = async (period = 'monthly') => {
     const periodWhere = getPeriodCondition(period, 'fecha_hora_pago');
     const periodWherePed = getPeriodCondition(period, 'ped.fecha_hora_creacion');
     const [pedidosListos] = await db.execute(`SELECT COUNT(*) as listos FROM Pedidos p JOIN Estados_Pedido ep ON p.id_estado = ep.id_estado WHERE ep.nombre_estado = 'Servido' AND p.id_pedido NOT IN (SELECT id_pedido FROM Facturas_Pagos)`);
-    const [cajaHoy] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS total_ingresado, COUNT(*) as facturas_emitidas FROM Facturas_Pagos WHERE DATE(fecha_hora_pago) = CURDATE()`);
+    const [cajaHoy] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS total_ingresado, COUNT(*) as facturas_emitidas FROM Facturas_Pagos WHERE DATE(CONVERT_TZ(fecha_hora_pago, '+00:00', '-06:00')) = DATE(CONVERT_TZ(NOW(), '+00:00', '-06:00'))`);
     const [cajaPeriodo] = await db.execute(`SELECT COALESCE(SUM(total_pagado), 0) AS total_periodo, COUNT(*) as facturas_periodo FROM Facturas_Pagos WHERE ${periodWhere}`);
 
     const [metodosResumen] = await db.execute(`

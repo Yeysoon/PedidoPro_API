@@ -5,18 +5,18 @@ const getVentasTotales = async (fechaInicio, fechaFin, limit, offset) => {
     const params = [];
 
     if (fechaInicio && fechaFin) {
-        whereClause = 'WHERE DATE(fecha_hora_pago) BETWEEN ? AND ?';
+        whereClause = "WHERE DATE(CONVERT_TZ(fecha_hora_pago, '+00:00', '-06:00')) BETWEEN ? AND ?";
         params.push(fechaInicio, fechaFin);
     }
 
     let query = `
-        SELECT DATE_FORMAT(fecha_hora_pago, '%Y-%m-%d') as fecha, 
+        SELECT DATE_FORMAT(CONVERT_TZ(fecha_hora_pago, '+00:00', '-06:00'), '%Y-%m-%d') as fecha, 
                CAST(SUM(total_pagado) AS DECIMAL(10,2)) as total_ventas, 
                COUNT(id_factura) as cantidad_facturas,
                COUNT(id_factura) as cantidad_pedidos
         FROM Facturas_Pagos
         ${whereClause}
-        GROUP BY DATE_FORMAT(fecha_hora_pago, '%Y-%m-%d')
+        GROUP BY DATE_FORMAT(CONVERT_TZ(fecha_hora_pago, '+00:00', '-06:00'), '%Y-%m-%d')
         ORDER BY fecha ASC
     `;
 
@@ -29,7 +29,7 @@ const getVentasTotales = async (fechaInicio, fechaFin, limit, offset) => {
     
     // 2. Obtener el total de registros
     const countQuery = `
-        SELECT COUNT(DISTINCT DATE_FORMAT(fecha_hora_pago, '%Y-%m-%d')) as total_rows
+        SELECT COUNT(DISTINCT DATE_FORMAT(CONVERT_TZ(fecha_hora_pago, '+00:00', '-06:00'), '%Y-%m-%d')) as total_rows
         FROM Facturas_Pagos
         ${whereClause}
     `;
