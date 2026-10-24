@@ -72,15 +72,18 @@ const facturarPedido = async (facturaData) => {
             FROM Detalle_Pedido WHERE id_pedido = ?
         `, [id_pedido]);
         
-        const subtotal = detalleRows[0].subtotal || 0;
-        const impuestos = subtotal * 0.13; // Ejemplo: 13% de IVA
-        const total_pagado = Number(subtotal) + Number(impuestos) + Number(propina || 0);
+        const subtotal = Number(detalleRows[0]?.subtotal || 0);
+        const propinaVal = Number(propina || 0);
+        // Los precios de los platillos del menú ya incluyen IVA (12% según ley tributaria).
+        // Se calcula el IVA contenido para efectos fiscales/contables sin sobrecargar al cliente.
+        const impuestos = Number(((subtotal / 1.12) * 0.12).toFixed(2));
+        const total_pagado = Number((subtotal + propinaVal).toFixed(2));
 
         // 2. Insertar Factura
         const [facturaResult] = await connection.execute(`
             INSERT INTO Facturas_Pagos (id_pedido, id_cliente, id_usuario_cajero, id_metodo_pago, subtotal, impuestos, total_pagado, propina)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [id_pedido, id_cliente || null, id_usuario_cajero, id_metodo_pago, subtotal, impuestos, total_pagado, propina || 0]);
+        `, [id_pedido, id_cliente || null, id_usuario_cajero, id_metodo_pago, subtotal, impuestos, total_pagado, propinaVal]);
 
         // 3. Obtener id_estado de 'Cobrado'
         const [estadoRows] = await connection.execute(`SELECT id_estado FROM Estados_Pedido WHERE nombre_estado = 'Cobrado'`);

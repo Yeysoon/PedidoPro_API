@@ -350,8 +350,8 @@ BEGIN
     FROM Detalle_Pedido
     WHERE id_pedido = p_id_pedido;
 
-    SET v_impuestos = v_subtotal * 0.12; -- IVA 12%
-    SET v_total = v_subtotal + v_impuestos + COALESCE(p_propina, 0.00);
+    SET v_impuestos = ROUND((v_subtotal / 1.12) * 0.12, 2); -- IVA 12% incluido en el consumo
+    SET v_total = v_subtotal + COALESCE(p_propina, 0.00);
 
     -- 2. Insertar Registro de Factura
     INSERT INTO Facturas_Pagos (

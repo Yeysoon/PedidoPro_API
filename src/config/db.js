@@ -32,6 +32,7 @@ pool.getConnection()
         console.log(`[DB] ✅ Conectado exitosamente a MySQL (${database}) en ${host}:${port}`);
         try {
             await connection.execute("UPDATE Roles SET nombre_rol = 'Cocinero' WHERE nombre_rol = 'Cocina'");
+            await connection.execute("UPDATE Facturas_Pagos SET total_pagado = ROUND(subtotal + COALESCE(propina, 0), 2), impuestos = ROUND((subtotal / 1.12) * 0.12, 2) WHERE total_pagado > subtotal + COALESCE(propina, 0)");
         } catch (_) {}
         connection.release();
     })
