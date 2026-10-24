@@ -36,10 +36,21 @@ const updateEstado = async (req, res) => {
 const createMesa = async (req, res) => {
     try {
         const { id_zona, numero_mesa, capacidad, estado } = req.body;
-        if (!id_zona || !numero_mesa || !capacidad) {
+        if (!id_zona || numero_mesa === undefined || !capacidad) {
             return res.status(400).json({ message: 'Todos los campos son obligatorios' });
         }
-        const id = await mesaModel.createMesa({ id_zona, numero_mesa, capacidad, estado });
+
+        const numMesa = parseInt(numero_mesa, 10);
+        if (isNaN(numMesa) || numMesa < 1 || numMesa > 1000) {
+            return res.status(400).json({ message: 'El número de mesa debe ser un número entero entre 1 y 1000 (sin negativos)' });
+        }
+
+        const capNum = parseInt(capacidad, 10);
+        if (isNaN(capNum) || capNum < 1 || capNum > 100) {
+            return res.status(400).json({ message: 'La capacidad debe ser entre 1 y 100 personas' });
+        }
+
+        const id = await mesaModel.createMesa({ id_zona, numero_mesa: numMesa, capacidad: capNum, estado });
         res.status(201).json({ message: 'Mesa creada exitosamente', id_mesa: id });
     } catch (error) {
         console.error('Error al crear mesa:', error);
@@ -57,6 +68,21 @@ const updateMesa = async (req, res) => {
     try {
         const { id } = req.params;
         const { id_zona, numero_mesa, capacidad, estado } = req.body;
+
+        if (numero_mesa !== undefined) {
+            const numMesa = parseInt(numero_mesa, 10);
+            if (isNaN(numMesa) || numMesa < 1 || numMesa > 1000) {
+                return res.status(400).json({ message: 'El número de mesa debe ser un número entero entre 1 y 1000 (sin negativos)' });
+            }
+        }
+
+        if (capacidad !== undefined) {
+            const capNum = parseInt(capacidad, 10);
+            if (isNaN(capNum) || capNum < 1 || capNum > 100) {
+                return res.status(400).json({ message: 'La capacidad debe ser entre 1 y 100 personas' });
+            }
+        }
+
         await mesaModel.updateMesa(id, { id_zona, numero_mesa, capacidad, estado });
         res.json({ message: 'Mesa actualizada exitosamente' });
     } catch (error) {

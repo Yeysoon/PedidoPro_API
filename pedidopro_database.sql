@@ -501,7 +501,18 @@ INSERT INTO `Ingredientes` (`id_ingrediente`, `nombre_ingrediente`, `unidad_medi
 (9, 'Costillas de Cerdo Seleccionadas', 'Libras (lb)', 45.00),
 (10, 'Salsa BBQ Ahumada', 'Litros (L)', 15.00),
 (11, 'Café Espresso Gourmet en Grano', 'Libras (lb)', 20.00),
-(12, 'Leche Entera Pasteurizada', 'Litros (L)', 30.00)
+(12, 'Leche Entera Pasteurizada', 'Litros (L)', 30.00),
+(13, 'Camarones Jumbo Limpios', 'Libras (lb)', 40.00),
+(14, 'Dientes de Ajo Fresco', 'Libras (lb)', 15.00),
+(15, 'Aceite de Oliva Extra Virgen', 'Litros (L)', 20.00),
+(16, 'Perejil Fresco Picado', 'Libras (lb)', 10.00),
+(17, 'Limón Persa Fresco', 'Libras (lb)', 35.00),
+(18, 'Hierbabuena Fresca en Hoja', 'Libras (lb)', 15.00),
+(19, 'Jarabe de Azúcar de Caña', 'Litros (L)', 25.00),
+(20, 'Chocolate Amargo 70% Repostería', 'Libras (lb)', 30.00),
+(21, 'Harina de Trigo para Bizcocho', 'Libras (lb)', 40.00),
+(22, 'Helado Artesanal de Vainilla', 'Litros (L)', 20.00),
+(23, 'Mantequilla sin Sal', 'Libras (lb)', 25.00)
 ON DUPLICATE KEY UPDATE nombre_ingrediente = VALUES(nombre_ingrediente);
 
 -- Inserción de Productos del Menú
@@ -526,8 +537,19 @@ INSERT INTO `Recetas_Producto` (`id_producto`, `id_ingrediente`, `cantidad_neces
 (2, 5, 3.00), -- 3 tortillas
 (3, 9, 1.20), -- costillas
 (3, 10, 0.15),-- salsa bbq
+(4, 13, 0.50),-- camarones jumbo
+(4, 14, 0.05),-- ajo fresco
+(4, 15, 0.05),-- aceite de oliva
+(4, 16, 0.02),-- perejil fresco
+(5, 17, 0.25),-- limon persa
+(5, 18, 0.05),-- hierbabuena fresca
+(5, 19, 0.05),-- jarabe de azucar
 (6, 11, 0.05),-- cafe
-(6, 12, 0.20) -- leche
+(6, 12, 0.20),-- leche
+(7, 20, 0.25),-- chocolate amargo
+(7, 21, 0.15),-- harina de trigo
+(7, 22, 0.10),-- helado de vainilla
+(7, 23, 0.08) -- mantequilla
 ON DUPLICATE KEY UPDATE cantidad_necesaria = VALUES(cantidad_necesaria);
 
 -- =============================================================================
