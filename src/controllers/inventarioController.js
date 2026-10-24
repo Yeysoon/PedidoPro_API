@@ -16,7 +16,11 @@ const createIngrediente = async (req, res) => {
         if (!nombre_ingrediente || !unidad_medida) {
             return res.status(400).json({ message: 'Nombre y unidad de medida son obligatorios' });
         }
-        const id = await inventarioModel.createIngrediente({ nombre_ingrediente, unidad_medida, stock_actual });
+        const stockNum = parseFloat(stock_actual ?? 0);
+        if (isNaN(stockNum) || stockNum < 0) {
+            return res.status(400).json({ message: 'El stock disponible no puede ser un valor negativo' });
+        }
+        const id = await inventarioModel.createIngrediente({ nombre_ingrediente: nombre_ingrediente.trim(), unidad_medida, stock_actual: stockNum });
         res.status(201).json({ message: 'Ingrediente creado', id_ingrediente: id });
     } catch (error) {
         res.status(500).json({ message: 'Error al crear ingrediente' });
@@ -27,7 +31,11 @@ const updateIngrediente = async (req, res) => {
     try {
         const { id } = req.params;
         const { nombre_ingrediente, unidad_medida, stock_actual } = req.body;
-        await inventarioModel.updateIngrediente(id, { nombre_ingrediente, unidad_medida, stock_actual });
+        const stockNum = parseFloat(stock_actual ?? 0);
+        if (isNaN(stockNum) || stockNum < 0) {
+            return res.status(400).json({ message: 'El stock disponible no puede ser un valor negativo' });
+        }
+        await inventarioModel.updateIngrediente(id, { nombre_ingrediente: nombre_ingrediente?.trim(), unidad_medida, stock_actual: stockNum });
         res.json({ message: 'Ingrediente actualizado' });
     } catch (error) {
         res.status(500).json({ message: 'Error al actualizar ingrediente' });
