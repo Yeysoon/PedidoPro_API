@@ -19,12 +19,17 @@ const facturar = async (req, res) => {
             return res.status(400).json({ message: 'Pedido y método de pago son obligatorios' });
         }
 
+        const propinaNum = Number(propina || 0);
+        if (isNaN(propinaNum) || propinaNum < 0 || propinaNum > 1000) {
+            return res.status(400).json({ message: 'La propina voluntaria debe ser un valor numérico entre 0 y 1000' });
+        }
+
         const id_factura = await cajaModel.facturarPedido({
             id_pedido,
             id_cliente,
             id_usuario_cajero,
             id_metodo_pago,
-            propina
+            propina: propinaNum
         });
 
         res.status(201).json({ message: 'Facturación procesada exitosamente', id_factura });
