@@ -22,21 +22,23 @@ const login = async (req, res) => {
             return res.status(401).json({ message: 'Credenciales invÃ¡lidas' });
         }
 
+        const normalizedRole = (user.nombre_rol && user.nombre_rol.toLowerCase().includes('cocin')) ? 'Cocinero' : user.nombre_rol;
+
         const payload = {
             id: user.id_usuario,
-            role: user.nombre_rol
+            role: normalizedRole
         };
 
         const token = jwt.sign(payload, (process.env.JWT_SECRET || 'pedidopro_jwt_secret_key_2025_secure'), { expiresIn: '8h' });
 
         res.json({
-            message: 'AutenticaciÃ³n exitosa',
+            message: 'Autenticación exitosa',
             token,
             user: {
                 id: user.id_usuario,
                 nombre: user.nombre,
                 email: user.email,
-                rol: user.nombre_rol
+                rol: normalizedRole
             }
         });
 

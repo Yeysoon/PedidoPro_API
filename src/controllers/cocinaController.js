@@ -53,7 +53,7 @@ const updateEstado = async (req, res) => {
         }
 
         // 3. Validaciones de Rol
-        if (rolUsuario === 'Cocinero') {
+        if (rolUsuario === 'Cocinero' || rolUsuario === 'Cocina') {
             const estadosPermitidosCocinero = ['Pendiente', 'En Preparación', 'Listo'];
             if (!estadosPermitidosCocinero.includes(estado)) {
                 return res.status(403).json({

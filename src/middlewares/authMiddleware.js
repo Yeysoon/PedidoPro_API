@@ -23,9 +23,10 @@ const verifyToken = async (req, res, next) => {
                     [userId]
                 );
                 if (uRows.length > 0) {
+                    const roleClean = (uRows[0].nombre_rol && uRows[0].nombre_rol.toLowerCase().includes('cocin')) ? 'Cocinero' : uRows[0].nombre_rol;
                     req.user.id = uRows[0].id_usuario;
-                    req.user.role = uRows[0].nombre_rol;
-                    req.user.rol = uRows[0].nombre_rol;
+                    req.user.role = roleClean;
+                    req.user.rol = roleClean;
                     req.user.activo = uRows[0].activo;
                 }
             } catch (dbErr) {

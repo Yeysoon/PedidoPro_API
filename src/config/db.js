@@ -28,8 +28,11 @@ const pool = mysql.createPool({
 });
 
 pool.getConnection()
-    .then((connection) => {
+    .then(async (connection) => {
         console.log(`[DB] ✅ Conectado exitosamente a MySQL (${database}) en ${host}:${port}`);
+        try {
+            await connection.execute("UPDATE Roles SET nombre_rol = 'Cocinero' WHERE nombre_rol = 'Cocina'");
+        } catch (_) {}
         connection.release();
     })
     .catch((err) => {

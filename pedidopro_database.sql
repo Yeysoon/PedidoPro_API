@@ -426,7 +426,7 @@ INSERT INTO `Roles` (`id_rol`, `nombre_rol`) VALUES
 (1, 'Administrador'),
 (2, 'Mesero'),
 (3, 'Cajero'),
-(4, 'Cocina')
+(4, 'Cocinero')
 ON DUPLICATE KEY UPDATE nombre_rol = VALUES(nombre_rol);
 
 -- Inserción de Estados de Pedido
